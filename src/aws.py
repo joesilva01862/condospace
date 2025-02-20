@@ -7,8 +7,6 @@ from io import BytesIO
 from PIL import Image
 import logging
 
-#aws_access_key_id="AKIAVUZQPPJSQ4KJK5PX"
-#aws_secret_access_key="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"
 
 
 class AWS():
