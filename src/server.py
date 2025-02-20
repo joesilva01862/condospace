@@ -256,7 +256,7 @@ def get_lat_long(address):
     pieces_str = ''
     for piece in pieces:
         pieces_str += f"+{piece}"
-    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={pieces_str}&key=AIzaSyBAP-AchOSyrJ796Vhoek9wgxYMODWp6ls"
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={pieces_str}&key={config['google_maps_api_key']}"
     headers = {'Content-Type': 'application/json'}
     response_json = requests.post(url, headers=headers)
     #print("JSON response:", response_json.json())

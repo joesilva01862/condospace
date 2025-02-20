@@ -1,9 +1,22 @@
 import os
 
 import boto3
+import json
+
+KEY_FILE = "key_file.json"
+
+with open(KEY_FILE, 'r') as f:
+    str_content = f.read()
+    config = json.loads(str_content)['config']
+    print(f"\nSome of the config vars:")
+
+#BUCKET_NAME = "blueriver-bucket"
+AWS_ACCESS_KEY_ID = config['aws_access_key_id']
+AWS_SECRET_ACCESS_KEY = config['aws_secret_access_key']
+
 
 # Create S3 client
-s3 = boto3.client("s3", aws_access_key_id="AKIAVUZQPPJSQ4KJK5PX", aws_secret_access_key="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",)
+s3 = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY,)
 
 # Store bucket name
 bucket_name = "blueriver-bucket"
