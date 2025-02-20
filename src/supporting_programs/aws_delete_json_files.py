@@ -5,14 +5,13 @@ import os
 import json
 
 BUCKET_NAME = "blueriver-bucket-test"
-KEY_FILE = "key_file.json"
+KEY_FILE = "key_file_test.json"
 
 with open(KEY_FILE, 'r') as f:
     str_content = f.read()
     config = json.loads(str_content)['config']
     print(f"\nSome of the config vars:")
 
-#BUCKET_NAME = "blueriver-bucket"
 AWS_ACCESS_KEY_ID = config['aws_access_key_id']
 AWS_SECRET_ACCESS_KEY = config['aws_secret_access_key']
 

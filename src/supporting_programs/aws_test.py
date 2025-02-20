@@ -2,11 +2,17 @@ from aws import AWS
 import os
 import json
 
-BUCKET_NAME = "blueriver-bucket"
-AWS_ACCESS_KEY_ID = "AKIAVUZQPPJSQ4KJK5PX"
-
 LIGHTSAIL_BUCKET_NAME = "bucket-8wzlf7"
-LIGHTSAIL_AWS_ACCESS_KEY_ID = "AKIAYHS2KFRQ6VRMGBE5"
+KEY_FILE = "key_file_test.json"   # ?
+
+with open(KEY_FILE, 'r') as f:
+    str_content = f.read()
+    config = json.loads(str_content)['config']
+    print(f"\nSome of the config vars:")
+
+#BUCKET_NAME = "blueriver-bucket"
+LIGHTSAIL_AWS_ACCESS_KEY_ID = config['aws_access_key_id']
+LIGHTSAIL_AWS_SECRET_ACCESS_KEY = config['aws_secret_access_key']
 
 aws = AWS("customers", LIGHTSAIL_BUCKET_NAME, LIGHTSAIL_AWS_ACCESS_KEY_ID, LIGHTSAIL_AWS_SECRET_ACCESS_KEY)
 
