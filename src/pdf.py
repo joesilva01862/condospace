@@ -1,8 +1,8 @@
 from fpdf import FPDF
-
+from PIL import Image
+from flask_babel import gettext
 from functions import format_field, test_blank, test_none, get_main_occupant, get_other_occupants, get_additional_info, \
       get_other_occupants, get_emergency_contact, get_vehicle_lines, get_rental_info, get_notes
-from functions import NONE_STRING, YES_STRING, HAS_KEY_STRING, NO_STRING, BLANK_STRING
 
 from datetime import datetime
 
@@ -51,6 +51,7 @@ class PDF(FPDF):
     """
 
     def print_unit_header(self, label):
+        self.set_text_color(50, 50, 50)
         # Arial 16
         self.set_font('Arial', 'B', 16)
         # Background color
@@ -62,7 +63,6 @@ class PDF(FPDF):
         self.set_text_color(140, 140, 140)
         date = datetime.today().strftime('%d-%b-%Y')
         self.cell(0, 6, date, 0, 1, 'R', True)
-        self.set_text_color(0, 0, 0)
 
     def print_residents(self, users):
         for i in range(0, len(users), 2):
@@ -89,11 +89,12 @@ class PDF(FPDF):
             first = False
 
     def print_resident(self, resident):
-        self.print_unit_header(f"Unit: {resident.unit}")
+        self.print_unit_header(f"{gettext('Unit')}: {resident.unit}")
+        self.set_text_color(60, 60, 60)
 
         self.ln(2)
         self.set_font('Courier', 'B', FONT_SIZE)
-        self.cell(0, TITLE_SPACING, 'Main Occupant:')
+        self.cell(0, TITLE_SPACING, f'{gettext("Main Occupant")}:')
         self.ln()
         self.set_font('Courier', '', FONT_SIZE)
         self.print_lines(get_main_occupant(resident), 4)
@@ -102,10 +103,10 @@ class PDF(FPDF):
         self.ln(SECTION_SPACING)
         self.set_font('Courier', 'B', FONT_SIZE)
         lines = get_other_occupants(resident)
-        if lines[0] == NONE_STRING:
-            self.cell(0, 5, 'Other Occupants: ' + NONE_STRING)
+        if lines[0] == f"[{gettext('NONE')}]":
+            self.cell(0, 5, f"{gettext('Other Occupants')}: [{gettext('NONE')}]")
         else:
-            self.cell(0, TITLE_SPACING, 'Other Occupants:')
+            self.cell(0, TITLE_SPACING, f"{gettext('Other Occupants')}:")
             self.ln()
             self.set_font('Courier', '', FONT_SIZE)
             self.print_lines(lines, 4)
@@ -113,10 +114,10 @@ class PDF(FPDF):
         # emergency contact
         self.ln(SECTION_SPACING)
         self.set_font('Courier', 'B', FONT_SIZE)
-        if get_emergency_contact(resident) == NONE_STRING:
-            self.cell(0, 5, 'Emergency Contact: ' + NONE_STRING)
+        if get_emergency_contact(resident) == f"[{gettext('NONE')}]":
+            self.cell(0, 5, f"{gettext('Emergency Contact')}: [{gettext('NONE')}]")
         else:
-            self.cell(0, TITLE_SPACING, 'Emergency Contact:')
+            self.cell(0, TITLE_SPACING, f"{gettext('Emergency Contact')}:")
             self.ln()
             self.set_font('Courier', '', FONT_SIZE)
             self.cell(0, 5, get_emergency_contact(resident))
@@ -124,7 +125,7 @@ class PDF(FPDF):
         # rental info
         self.ln(SECTION_SPACING)
         self.set_font('Courier', 'B', FONT_SIZE)
-        self.cell(0, 5, 'Rental Info:')
+        self.cell(0, 5, f"{gettext('Rental Info')}:")
         self.ln()
         self.set_font('Courier', '', FONT_SIZE)
         self.print_lines(get_rental_info(resident), 4)
@@ -132,7 +133,7 @@ class PDF(FPDF):
         # additional info
         self.ln(SECTION_SPACING)
         self.set_font('Courier', 'B', FONT_SIZE)
-        self.cell(0, TITLE_SPACING, 'Additional Info:')
+        self.cell(0, TITLE_SPACING, f"{gettext('Additional Info')}:")
         self.ln()
         self.set_font('Courier', '', FONT_SIZE)
         self.print_lines(get_additional_info(resident), 4)
@@ -140,7 +141,7 @@ class PDF(FPDF):
         # vehicles
         self.ln(SECTION_SPACING)
         self.set_font('Courier', 'B', FONT_SIZE)
-        self.cell(0, TITLE_SPACING, 'Vehicles:')
+        self.cell(0, TITLE_SPACING, f"{gettext('Vehicles')}:")
         self.ln()
         self.set_font('Courier', '', FONT_SIZE)
         self.print_lines(get_vehicle_lines(resident), 4)
@@ -149,14 +150,60 @@ class PDF(FPDF):
         self.ln(SECTION_SPACING)
         self.set_font('Courier', 'B', FONT_SIZE)
         lines = get_notes(resident)
-        if lines[0] == NONE_STRING:
-            self.cell(0, 5, 'Notes: ' + NONE_STRING)
+        if lines[0] == f"[{gettext('NONE')}]":
+            self.cell(0, 5, f"{gettext('Notes')}: [{gettext('NONE')}]")
         else:
-            self.cell(0, TITLE_SPACING, 'Notes:')
+            self.cell(0, TITLE_SPACING, f"{gettext('Notes')}:")
             self.ln()
             self.set_font('Courier', '', FONT_SIZE)
             self.print_lines(get_notes(resident), 4)
 
+    def print_report(self, img_bytes, info_data, residents):
+        self.print_first_page(img_bytes, info_data)
+        self.print_residents(residents)
+
+    def draw_rectangle(self):
+        self.set_draw_color(200)
+        blue_x = 10
+        blue_y = 10
+        pw = 210
+        ph = 297
+        self.set_fill_color(200, 220, 255)  # light blue
+        blue_w = pw - (blue_x * 2)
+        blue_h = ph - (blue_y * 2)
+        self.rect(blue_x, blue_y, blue_w, blue_h, style="F")
+        lw = 6  # border thickness
+        white_x = blue_x + lw
+        white_y = blue_y + lw
+        self.set_fill_color(255, 255, 255)  # white
+        white_w = blue_w - (lw * 2)
+        white_h = blue_h - (lw * 2)
+        self.rect(white_x, white_y, white_w, white_h, style="F")
+
+    def print_first_page(self, img_bytes, info_data):
+        self.add_page("P")  # portrait, size A4
+        self.draw_rectangle()
+        logo_image = Image.open(img_bytes)
+        pdf_w, pdf_h = 290, 350
+        temp_file = "temp_img.jpg"
+        logo_image.save(temp_file)
+        x = (pdf_w - logo_image.width) / 2
+        y = ((pdf_h - logo_image.height) / 2)
+        y -= 20
+        self.image(temp_file, x, y)
+        self.set_font('Arial', '', 26)
+        self.ln(y + 20)
+        self.cell(0, 10, info_data['condo_name'], 0, 0, 'C')
+        self.ln(8)
+        self.set_font('Arial', '', 14)
+        address = f"{info_data['address']}, {info_data['condo_location']}"
+        self.set_fill_color(255, 255, 255)
+        self.set_text_color(70, 70, 70)
+        self.cell(0, 10, address, 0, 0, 'C')
+        date = datetime.today().strftime('%d-%b-%Y')
+        self.ln(14)
+        self.set_text_color(110, 110, 110)
+        self.cell(0, 10, date, 0, 0, 'C')
 
     def print_one_page(self, resident1, resident2):
         self.add_page()

@@ -40,6 +40,14 @@ const SELECTED_FILES_CONTROL = "selectedFiles";
 
 document.addEventListener("DOMContentLoaded", init, false);
 
+/* these are global variables; used in multiple .js files
+   For this to work: import common.js first; import the page's .js file; in the onLoadAction(), populate these vars
+*/
+window.loggedin_id_global = null;
+window.loggedin_userid_global = null;
+window.loggedin_name_global = null;
+window.loggedin_tenant_global = null;
+
 function init() {
     // if the user isn't logged in, certain elements will not be present
     if ( document.getElementById('files_cntrl') != null ) {
@@ -50,7 +58,7 @@ function init() {
 
 function gen_residents_pdf() {
     var request = new XMLHttpRequest()
-    get_url = "/" + loggedin_tenant_global + "/generatepdf";
+    get_url = "/" + window.loggedin_tenant_global + "/generatepdf";
     request.open('GET', get_url, true);
     request.onload = function () {
         // Begin accessing JSON data here
@@ -423,7 +431,7 @@ function validateEmailFields() {
 
 function saveResident(pageName) {
     var request = new XMLHttpRequest();
-    post_url = "/" + loggedin_tenant_global + "/saveresident";
+    post_url = "/" + window.loggedin_tenant_global + "/saveresident";
     request.open('POST', post_url, true);
 
     request.onload = function () {
@@ -736,11 +744,11 @@ function uploadPictureFiles(name, fileControl, barControl) {
 
     // initializes a newly-created request
     if (name === UPLOAD_LISTING) {
-        post_url = "/" + loggedin_tenant_global + "/upload_listing";
+        post_url = "/" + window.loggedin_tenant_global + "/upload_listing";
         request.open('POST', post_url, true);
     }
     else {
-        post_url = "/" + loggedin_tenant_global + "/upload_event_pics";
+        post_url = "/" + window.loggedin_tenant_global + "/upload_event_pics";
         request.open('POST', post_url, true);
     }
 
@@ -776,13 +784,13 @@ function deletePictureFiles(name, key) {
     var requestObj = new Object();
 
     if (name === 'listing') {
-        post_url = "/" + loggedin_tenant_global + "/delete_listing";
+        post_url = "/" + window.loggedin_tenant_global + "/delete_listing";
         request.open('POST', post_url, true)
         requestObj.unit = key;
     }
     else
     if (name === 'eventpics') {
-        post_url = "/" + loggedin_tenant_global + "/delete_event_pics";
+        post_url = "/" + window.loggedin_tenant_global + "/delete_event_pics";
         request.open('POST', post_url, true)
         requestObj.title = key;
     }
@@ -862,7 +870,7 @@ function uploadFileProgress(convname, fileControl, barControl) {
     });
 
     // initializes a newly-created request
-    post_url = "/" + loggedin_tenant + "/upload";
+    post_url = "/" + window.loggedin_tenant_global + "/upload";
     request.open('POST', post_url, true);
 
     // ask to be notified when the upload is finished
@@ -890,7 +898,7 @@ function uploadLink() {
 
     // here we make a request to "upload_link"
     var request = new XMLHttpRequest();
-    post_url = "/" + loggedin_tenant + "/upload_link";
+    post_url = "/" + window.loggedin_tenant_global + "/upload_link";
     request.open('POST', post_url, true)
 
     request.onload = function () {
@@ -945,7 +953,7 @@ function updateSystemSettings() {
 
     // here we make a request to "upload_link"
     var request = new XMLHttpRequest();
-    post_url = "/" + loggedin_tenant + "/update_system_settings";
+    post_url = "/" + window.loggedin_tenant_global + "/update_system_settings";
     request.open('POST', post_url, true)
 
     request.onload = function () {

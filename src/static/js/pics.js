@@ -1,14 +1,9 @@
 
-loggedin_id_global = null;
-loggedin_userid_global = null;
-loggedin_name_global = null;
-loggedin_tenant_global = null;
-
 function onLoadAction() {
-    loggedin_id_global = document.getElementById('loggedin-id').value;
-    loggedin_userid_global = document.getElementById('loggedin-userid').value;
-    loggedin_name_global = document.getElementById('loggedin-name').value;
-    loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
+    window.loggedin_id_global = document.getElementById('loggedin-id').value;
+    window.loggedin_userid_global = document.getElementById('loggedin-userid').value;
+    window.loggedin_name_global = document.getElementById('loggedin-name').value;
+    window.loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
 }
 
 /* this makes the text be only numbers, no decimal sign */
@@ -69,7 +64,7 @@ function uploadFileProgress(convname, fileControl, barControl) {
     });
 
     // initializes a newly-created request
-    post_url = "/" + loggedin_tenant_global + "/upload";
+    post_url = "/" + window.loggedin_tenant_global + "/upload";
     request.open('POST', post_url, true);
 
     // ask to be notified when the upload is finished

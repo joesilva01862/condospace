@@ -53,7 +53,7 @@ from aws import AWS
 from PIL import Image
 from io import BytesIO
 from redmail import gmail
-from flask_babel import Babel, lazy_gettext
+from flask_babel import Babel, gettext, lazy_gettext, _
 
 ''' for simulation of long running tasks '''
 from threading import Thread, Lock
@@ -1129,20 +1129,6 @@ def update_settings(tenant):
     info['config']['about_message']['title'] = json_req['request']['about_page_title']
     home_text = json_req['request']['home_page_text'].split('\n')
     about_text = json_req['request']['about_page_text'].split('\n')
-    # home_lines = []
-    # for msg in home_text:
-    #     msg = msg.strip()
-    #     if len(msg) > 0:
-    #         print(f"line: {msg}")
-    #         home_lines.append(msg)
-
-    # about_lines = []
-    # for msg in about_text:
-    #     msg = msg.strip()
-    #     if len(msg) > 0:
-    #         print(f"line: {msg}")
-    #         about_lines.append(msg)
-
     lat, long = get_lat_long(json_req['request']['condo_location'])
     print(f"lat {lat},  long {long}")
     info['config']['geo']['lat'] = lat
@@ -1150,7 +1136,6 @@ def update_settings(tenant):
     info['config']['home_message']['lines'] = [ msg for msg in home_text if len(msg.strip()) > 0]
     info['config']['about_message']['lines'] = [ msg for msg in about_text if len(msg.strip()) > 0]
     aws.upload_text_obj(f"{get_tenant()}/{INFO_FILE}", json.dumps(info))
-    print(f"info: {info}")
     return_obj = json.dumps({'response': {'status': 'success'}})
     lock.release()
     return return_obj
@@ -1333,9 +1318,9 @@ def upload_event_pics(tenant):
         new_event = {'title': f'{request.form["title"]}', 'date': f'{request.form["date"]}', 'cover_file': f'{cover_name}' }
         event_pics['event_pictures'][folder_name] = new_event
     else:
-        new_event = {folder_name: f'{request.form["title"]}', 'date': f'{request.form["date"]}', 'cover_file': f'{cover_name}' }
-        new_event_dict = {folder_name: new_event}
-        event_pics = {"event_pictures": new_event_dict}
+        new_event = {'title': f'{request.form["title"]}', 'date': f'{request.form["date"]}', 'cover_file': f'{cover_name}' }
+        # new_event_dict = {folder_name: new_event}
+        event_pics = {"event_pictures": { f"{folder_name}": new_event } }
 
     # now we upload/update the json file itself with the new content
     aws.upload_text_obj(f"{tenant}/{EVENT_PICS_FILE}", json.dumps(event_pics))
@@ -1369,6 +1354,7 @@ def event_picture(tenant, title):
         pictures = None
     else:
         event = events['event_pictures'][title]
+        print(f"info do evento: {event}")
     return render_template("event.html", title=title, event=event, pics=pictures, user_types=staticvars.user_types, info_data=info_data)
 
 
@@ -1577,9 +1563,11 @@ def gen_pdf(tenant):
 
     # sort residents list by unit number
     residents.sort(key=sort_residents)
-    
-    # create PDF content and output file
-    pdf.print_residents(residents)
+
+    # print the report
+    img_name = f"{tenant}/{UNPROTECTED_FOLDER}/branding/logo.jpg"
+    pdf.print_report(aws.read_binary_obj(img_name), info_data, residents)
+
 #    pdf.output(CENSUS_FORMS_PDF_FULL_PATH, 'F')
     pdf_obj = pdf.output(dest='S').encode('latin-1')
     pdf_path = f"{tenant}/{CENSUS_FORMS_PDF_FULL_PATH}"
@@ -2216,7 +2204,6 @@ def load_user(composite_id):
     return ret_user
 
 
-
 def get_files(folder, pattern):
     print(f"in get_files(): tenant: {get_tenant()}")
     files = aws.get_file_list_folder(get_tenant(), folder)
@@ -2259,7 +2246,13 @@ def translate():
 
 # this call cannot be inside main() because this will run with gunicorn in PROD
 babel = Babel(app, locale_selector=get_locale)
+_ = lazy_gettext
 
+# text = _('Main Occupant')
+# print(f"type: {type(text)}")
+# print(f"translated: {text}")
+# print(f"translated: {str(lazy_gettext('Main Occupant'))}")
+# print(f"translated: {gettext('Main Occupant')}")
 
 def test_new_users_rep():
     users_repo = UsersRepository(aws)

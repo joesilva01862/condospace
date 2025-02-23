@@ -7,18 +7,14 @@ var resident_type = RESIDENT_TYPE;
 var loggedin_user = 0;
 var loggedin_unit = 0;
 
-loggedin_userid_global = null;
-loggedin_name_global = null;
-loggedin_tenant_global = null;
-
 function onLoadAction() {
     // I have to find a better way to tell which is the logged-in user, other
     // than asking the server
     //loadResident();
-    loggedin_userid_global = document.getElementById('loggedin-userid').value;
-    loggedin_name_global = document.getElementById('loggedin-name').value;
-    loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
-    retrieveLoggedinResident(loggedin_userid_global);
+    window.loggedin_userid_global = document.getElementById('loggedin-userid').value;
+    window.loggedin_name_global = document.getElementById('loggedin-name').value;
+    window.loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
+    retrieveLoggedinResident(window.loggedin_userid_global);
 }
 
 function loadResident() {
@@ -53,12 +49,12 @@ function loadResident() {
 
 function retrieveLoggedinResident(userid) {
   var request = new XMLHttpRequest();
-  post_url = "/" + loggedin_tenant_global + "/getresident";
+  post_url = "/" + window.loggedin_tenant_global + "/getresident";
   request.open('POST', post_url, true)
 
   var requestObj = new Object();
   requestObj.type = 'user';
-  requestObj.tenant = loggedin_tenant_global;
+  requestObj.tenant = window.loggedin_tenant_global;
   requestObj.id = userid;
 
   jsonStr = '{ "request": ' + JSON.stringify(requestObj) + '}';
@@ -248,7 +244,7 @@ function populateScreen(json) {
 function retrieveUserByUnit() {
   var user_id = document.getElementById('user_id').value;
   var request = new XMLHttpRequest();
-  post_url = "/" + loggedin_tenant_global + "/getresident";
+  post_url = "/" + window.loggedin_tenant_global + "/getresident";
   request.open('POST', post_url, true)
 
   request.onload = function () {
@@ -582,11 +578,11 @@ function changePassword() {
 
     // prepare structure to send to backend
     var request = new XMLHttpRequest();
-    post_url = "/" + loggedin_tenant_global + "/getresident";
+    post_url = "/" + window.loggedin_tenant_global + "/getresident";
     request.open('POST', post_url, true)
     var requestObj = new Object();
     requestObj.type = 'user';
-    requestObj.tenant = loggedin_tenant_global;
+    requestObj.tenant = window.loggedin_tenant_global;
     requestObj.id = user_id;
     jsonStr = '{ "request": ' + JSON.stringify(requestObj) + '}';
     request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
@@ -623,13 +619,13 @@ function changePassword() {
 
 function change_db_password(user_id, new_password) {
     var request = new XMLHttpRequest();
-    post_url = "/" + loggedin_tenant_global + "/changepassword";
+    post_url = "/" + window.loggedin_tenant_global + "/changepassword";
     request.open('POST', post_url, true)
 
     // prepare structure to invoke backend
-    console.log('user data: '+loggedin_tenant_global + '  ' + user_id + '  ' + new_password);
+    console.log('user data: '+window.loggedin_tenant_global + '  ' + user_id + '  ' + new_password);
     var requestObj = new Object();
-    requestObj.tenant = loggedin_tenant_global;
+    requestObj.tenant = window.loggedin_tenant_global;
     requestObj.user_id = user_id;
     requestObj.password = new_password;
     jsonStr = '{ "resident": ' + JSON.stringify(requestObj) + '}';

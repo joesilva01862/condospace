@@ -1,20 +1,10 @@
-/*
-loggedin_id = document.getElementById('loggedin-id').value;
-loggedin_name = document.getElementById('loggedin-name').value;
-loggedin_tenant = document.getElementById('loggedin-tenant').value;
-*/
-
-loggedin_id_global = null;
-loggedin_userid_global = null;
-loggedin_name_global = null;
-loggedin_tenant_global = null;
 
 
 function onLoadAction() {
-    loggedin_id_global = document.getElementById('loggedin-id').value;
-    loggedin_userid_global = document.getElementById('loggedin-userid').value;
-    loggedin_name_global = document.getElementById('loggedin-name').value;
-    loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
+    window.loggedin_id_global = document.getElementById('loggedin-id').value;
+    window.loggedin_userid_global = document.getElementById('loggedin-userid').value;
+    window.loggedin_name_global = document.getElementById('loggedin-name').value;
+    window.loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
     document.getElementById("email-progress-bar").style.display = "none";
     fillAnnouncs();
     retrieveUsers();
@@ -29,9 +19,9 @@ function onLoadAction() {
    which would create a double "onLoadAction()" function
 */
 function fillAnnouncs() {
-    var request = new XMLHttpRequest()
-    get_url = "/" + loggedin_tenant_global + "/getannouncs";
-    request.open('GET', get_url, true)
+    var request = new XMLHttpRequest();
+    get_url = "/" + window.loggedin_tenant_global + "/getannouncs";
+    request.open('GET', get_url, true);
 
     request.onload = function () {
       // Begin accessing JSON data here
@@ -54,7 +44,7 @@ function fillAnnouncs() {
 
 function fillSystemSettings() {
     var request = new XMLHttpRequest()
-    get_url = "/" + loggedin_tenant_global + "/get_system_settings";
+    get_url = "/" + window.loggedin_tenant_global + "/get_system_settings";
     request.open('GET', get_url, true)
 
     request.onload = function () {
@@ -215,10 +205,10 @@ function startSendEmail() {
 
 function retrieveUsers() {
     var request = new XMLHttpRequest()
-    post_url = "/" + loggedin_tenant_global + "/getresidents";
+    post_url = "/" + window.loggedin_tenant_global + "/getresidents";
     request.open('POST', post_url, true)
     var requestObj = new Object();
-    requestObj.tenant = loggedin_tenant_global;
+    requestObj.tenant = window.loggedin_tenant_global;
     jsonStr = '{ "request": ' + JSON.stringify(requestObj) + '}';
     request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
 

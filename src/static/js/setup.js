@@ -134,24 +134,19 @@ uiProfileMap.set('color_1', 'color_1');
 uiProfileMap.set('year_1', 'year_1');
 uiProfileMap.set('notes', 'notes');
 
-loggedin_id_global = null;
-loggedin_userid_global = null;
-loggedin_name_global = null;
-loggedin_tenant_global = null;
-
 
 /* invoked by setup.html */
 function onLoadAction() {
-    loggedin_id_global = document.getElementById('loggedin-id').value;
-    loggedin_userid_global = document.getElementById('loggedin-userid').value;
-    loggedin_name_global = document.getElementById('loggedin-name').value;
-    loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
-    setupRetrieveUsers(loggedin_tenant_global);
+    window.loggedin_id_global = document.getElementById('loggedin-id').value;
+    window.loggedin_userid_global = document.getElementById('loggedin-userid').value;
+    window.loggedin_name_global = document.getElementById('loggedin-name').value;
+    window.loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
+    setupRetrieveUsers(window.loggedin_tenant_global);
 }
 
 function setupRetrieveUsers(tenant) {
     var request = new XMLHttpRequest()
-    post_url = "/" + loggedin_tenant_global + "/getresidents";
+    post_url = "/" + window.loggedin_tenant_global + "/getresidents";
     request.open('POST', post_url, true);
 
     var requestObj = new Object();
@@ -190,7 +185,7 @@ function retrieveUser() {
 
 
   var user_id = document.getElementById('user_id_delete').value;
-  post_url = "/" + loggedin_tenant_global + "/getresident";
+  post_url = "/" + window.loggedin_tenant_global + "/getresident";
   request.open('POST', post_url, true);
 
   request.onload = function () {
