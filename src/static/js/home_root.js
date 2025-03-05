@@ -11,7 +11,7 @@ function sendContactEmail() {
     message = document.getElementById('message').value.trim();
 
     if (name.length == 0 || email.length == 0 | message.length == 0) {
-        alert("Fields name, email and message cannot be blank");
+        showMsgBox( gettext("Fields name, email and message cannot be blank") );
         return;
     }
 
@@ -47,23 +47,18 @@ function sendCondoRegistration() {
     condo_tagline = document.getElementById('condo-tagline').value.trim();
     condo_location = document.getElementById('condo-location').value.trim();
 
-//    if (userid.length == 0 || userid.indexOf(" ") != -1 ) {
-//        alert("Admin Id cannot be empty, cannot have spaces");
-//        return;
-//    }
-//
-//    if (userpass.length == 0 ) {
-//        alert("Admin Password cannot be empty");
-//        return;
-//    }
-
     if (name.length == 0 ) {
-        alert("Admin Name cannot be empty");
+        showMsgBox( gettext("Admin Name cannot be empty") );
         return;
     }
 
     if (condo_id.length == 0 || condo_id.indexOf(" ") != -1 ) {
-        alert("Condo Id cannot be empty, cannot have spaces");
+        showMsgBox( gettext("Condo Id cannot be empty, cannot have spaces") );
+        return;
+    }
+
+    if (email.length == 0 ) {
+        showMsgBox( gettext("Admin email cannot be empty") );
         return;
     }
 
@@ -71,12 +66,12 @@ function sendCondoRegistration() {
     validatePhone('phone', true);
 
     if (condo_name.length == 0 ) {
-        alert("Condominium Name cannot be empty");
+        showMsgBox( gettext("Condominium Name cannot be empty") );
         return;
     }
 
     if (condo_location.length == 0 ) {
-        alert("Condominium Location cannot be empty");
+        showMsgBox( gettext("Condominium Location cannot be empty") );
         return;
     }
 
@@ -108,18 +103,18 @@ function sendCondoRegistration() {
 
         if (request.status >= 200 && request.status < 400) {
             if (json.status === 'success') {
-                alert("Enviamos usuário & senha bem como instruções para o email informado");
+                showMsgBox( gettext("Success! We sent login info as well as instructions to the email provided") );
                 url = json.condo_id + "/" + "login";
                 window.location.replace(url);
                 return;
             }
             else {
-                alert('Error: '+json.response.message);
+                showMsgBox('Error: '+json.response.message);
                 return;
             }
         }
         else {
-            alert('Error creating registering new condominium');
+            showMsgBox( gettext('Error creating registering new condominium') );
             return;
         }
     }
@@ -142,12 +137,12 @@ function sendCondoRegistrationForm() {
     use_default_img = document.getElementById('use-default-img');
 
     if (name.length == 0 ) {
-        alert("Admin Name cannot be empty");
+        showMsgBox( gettext("Admin Name cannot be empty") );
         return;
     }
 
     if (condo_id.length == 0 || condo_id.indexOf(" ") != -1 ) {
-        alert("Condo Id cannot be empty, cannot have spaces");
+        showMsgBox( gettext("Condo Id cannot be empty, cannot have spaces") );
         return;
     }
 
@@ -155,12 +150,12 @@ function sendCondoRegistrationForm() {
     validatePhone('phone', true);
 
     if (condo_name.length == 0 ) {
-        alert("Condominium Name cannot be empty");
+        showMsgBox( gettext("Condominium Name cannot be empty") );
         return;
     }
 
     if (condo_location.length == 0 ) {
-        alert("Condominium Location cannot be empty");
+        showMsgBox( gettext("Condominium Location cannot be empty") );
         return;
     }
 
@@ -176,7 +171,7 @@ function sendCondoRegistrationForm() {
     if ( !use_default_img.checked ) {
         img_file = document.getElementById('condo-img-file').files[0];
         if ( img_file == null ) {
-            alert("You should either check the 'Use a default picture' box or select a picture file");
+            showMsgBox( gettext("You should either check the 'Use a default picture' box or select a picture file") );
             return;
         }
         formData.append("home_pic",  img_file);
@@ -204,18 +199,18 @@ function sendCondoRegistrationForm() {
 
         if (request.status >= 200 && request.status < 400) {
             if (json.status === 'success') {
-                alert("Enviamos usuário & senha bem como instruções para o email informado");
+                showMsgBox( gettext("Success! We sent login info as well as instructions to the email provided") );
                 url = json.condo_id + "/" + "login";
                 window.location.replace(url);
                 return;
             }
             else {
-                alert('Error: '+json.response.message);
+                showMsgBox( gettext('Error: '+json.response.message) );
                 return;
             }
         }
         else {
-            alert('Error creating registering new condominium');
+            showMsgBox( gettext('Error creating registering new condominium') );
             return;
         }
     }

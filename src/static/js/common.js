@@ -65,16 +65,76 @@ function gen_residents_pdf() {
         var json = JSON.parse(this.response);
 
         if (request.status >= 200 && request.status < 400) {
-            alert('Census Forms PDF has been created');
+            showMsgBox( gettext('Census Forms PDF has been created') );
         }
         else {
-            alert('Error retrieving residents list');
+            showMsgBox( gettext('Error retrieving residents list') );
         }
     }
     request.send();
 }
 
-function displayMessage(type, param2, param3) {
+function download_residents_pdf() {
+    var request = new XMLHttpRequest()
+    get_url = "/" + window.loggedin_tenant_global + "/checkpdf";
+    request.open('GET', get_url, true);
+    request.onload = function () {
+        // Begin accessing JSON data here
+        var json = JSON.parse(this.response);
+
+        if (request.status >= 200 && request.status < 400) {
+            if (json.response.status == 'file_not_found') {
+                showMsgBox('Please generate the PDF file first');
+            }
+            else {
+                window.open("docs/other/census_form.pdf", "_blank");
+            }
+        }
+    }
+    request.send();
+}
+
+function showMsgBox(text) {
+    showMsgBoxError(gettext(text)); // the default is the message be an error
+}
+
+function showMsgBoxSuccess(text) {
+    showMsgBoxColor('#039dbf', text);  // blue
+}
+
+function showMsgBoxError(text) {
+    showMsgBoxColor('#e43838', text); // red
+}
+
+function showMsgBoxColor(text_color, text) {
+    const msg = `<label style='color:${text_color};'>${text}</label>`;
+    console.log(msg);
+    var dialog = bootbox.dialog({
+        message: msg,
+        closeButton: false,
+        backdrop: false,
+        onEscape: true,
+        buttons: {
+                ok: {
+                    label: "OK",
+                    className: 'btn-info',
+                    callback: function(){
+                        //alert('Custom OK clicked');
+                    }
+                }
+        }
+    });
+}
+
+function showFadingMsg(msg) {
+    showFadingMsgParam(ERROR_MSG, msg);  // default is ERROR_MSG
+}
+
+function showFadingMsgSuccess(msg) {
+    showFadingMsgParam(SUCCESS_MSG, msg);
+}
+
+function showFadingMsgParam(type, param2, param3) {
     if (param3 === undefined) {
         line_start = 900;
         msg = param2;
@@ -84,36 +144,70 @@ function displayMessage(type, param2, param3) {
         msg = param3;
     }
 
+    secs_before_fading = 1;
     secs = 4;
     intv = 100;
     count = (secs * 1000) / intv;
+    //alert('count is '+count);
     op = 1;
     op_decr = op / count;
-    div_block = document.getElementById(MESSAGE_BLOCK_ID);
-    if (type == SUCCESS_MSG) {
-        div_block.style.background = 'green';
-    }
-    else {
-        div_block.style.background = 'red';
-    }
 
+    // create the div element for fading message
+    var elemDiv = document.createElement('div');
+    elemDiv.id = 'message_block_id';
+    elemDiv.classList.add("message-block");
+    document.getElementById('content_id').appendChild(elemDiv);
+
+    div_block = document.getElementById(MESSAGE_BLOCK_ID);
+    div_block.style.background = (type === SUCCESS_MSG) ? '#6ac87c' : '#f55555';
     div_block.innerHTML = msg;
     div_block.style.display = 'block';
     div_block.style.opacity = op;
-    div_block.style.top = ''+line_start+'px';
-    timeoutId = setInterval(fadeAction, intv);
+//    div_block.style.top = ''+line_start+'px';
+/*
+    sleep(secs_before_fading*1000).then(() => {
+        // Do something after the sleep!
+        timeoutId = setInterval(fadeAction, intv);
+    });
+*/
+    setTimeout(function() {
+        timeoutId = setInterval(fadeAction, intv);
+    }, secs_before_fading*1000); // Delay of 2000 milliseconds (2 seconds)
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function fadeAction() {
     //alert('action report');
     op -= op_decr;
     count -= 1;
-    transition = document.getElementById(MESSAGE_BLOCK_ID);
-    transition.style.opacity = op;
+    div_block = document.getElementById(MESSAGE_BLOCK_ID);
+    div_block.style.opacity = op;
     if (count == 0) {
         clearTimeout(timeoutId);
-        transition.style.display = 'none';
+        //div_block.style.display = 'none';
+        div_block.remove();
     }
+}
+
+function showFadeout1(type, msg) {
+      div_block = document.getElementById(MESSAGE_BLOCK_ID);
+      div_block.style.background = (type === SUCCESS_MSG) ? 'green' : 'red';
+      div_block.style.display = 'block';
+      div_block.style.opacity = 1;
+      alert(msg);
+      let opacity = 1;
+      const intervalId = setInterval(function() {
+        if (opacity > 0) {
+          opacity -= 0.1;
+          div_block.style.opacity = opacity;
+        } else {
+          clearInterval(intervalId);
+          div_block.style.display = 'none'; // Optional: Hide the element completely after fade out
+        }
+      }, 50); // Adjust the interval for speed of fade
 }
 
 function handleRentalClick(cb) {
@@ -302,8 +396,7 @@ function populateTable(json, table_id, user_type_param) {
 
         if (json.residents[i].userid != loggedin_userid_global) {
             click_str = "deleteUserParam('" + json.residents[i].userid + "');";
-            console.log(click_str);
-            del_btn_cell.innerHTML = '<input id="Button" style="font-size: 11px; height: 20px;" type="button" value="delete" onClick="' + click_str + '" />';
+            del_btn_cell.innerHTML = '<button id="delete" class="button small-button" onClick="' + click_str + '" title="delete user from database">delete</button>';
         }
 
         var unit = json.residents[i].unit;
@@ -440,14 +533,14 @@ function saveResident(pageName) {
 
       if (request.status >= 200 && request.status < 400) {
           if (json.response.status == 'success') {
-              alert('Record saved to database');
+              showFadingMsgSuccess('Record saved to database');
           }
           else {
-              alert('Error saving record to database');
+              showFadingMsg('Error saving record to database');
           }
       }
       else {
-          alert('Error saving record to database');
+          showFadingMsg('Error saving record to database');
       }
 
       location.reload();
@@ -455,6 +548,13 @@ function saveResident(pageName) {
 
     var requestObj = new Object();
     requestObj.userid = document.getElementById('user_id_adm').value;
+
+    if (requestObj.userid.trim().length == 0) {
+        //showFadingMsg(ERROR_MSG, 'User is a required field');
+        showMsgBox( gettext('User is a required field') );
+        return;
+    }
+
     requestObj.tenant = document.getElementById('loggedin-tenant').value;
 
     if ( document.getElementById('resident_type') != null) {
@@ -464,7 +564,8 @@ function saveResident(pageName) {
     if ( document.getElementById('password') != null ) {
         requestObj.password = document.getElementById('password').value;
         if (requestObj.password.trim().length == 0) {
-            alert('Password is a required field');
+            //showFadingMsg(ERROR_MSG, 'Password is a required field');
+            showMsgBox( gettext('Password is a required field') );
             return;
         }
     }
@@ -472,19 +573,19 @@ function saveResident(pageName) {
     var name = document.getElementById('name').value.trim();
 
     if (name.length == 0) {
-        //displayMessage(ERROR_MSG, "Main occupant's name cannot be blank");
-        alert("Main occupant's name cannot be blank");
+        //showFadingMsg(ERROR_MSG, "Main occupant's name cannot be blank");
+        showMsgBox( gettext("Main occupant's name cannot be blank") );
         return;
     }
 
     if (validatePhoneFields() > 0) {
-        //displayMessage(ERROR_MSG, "One or more phone fields have invalid content");
-        alert("One or more phone fields have invalid content");
+        //showFadingMsg(ERROR_MSG, "One or more phone fields have invalid content");
+        showMsgBox( gettext("One or more phone fields have invalid content") );
         return;
     }
 
     if (validateEmailFields() > 0) {
-        alert("One or more email fields have invalid content");
+        showMsgBox( gettext("One or more email fields have invalid content") );
         return;
     }
 
@@ -592,7 +693,7 @@ function saveResident(pageName) {
             requestObj.last_update_date = new Date().toLocaleDateString();
         }
         else
-        if ( loggedin_user == document.getElementById('user_id_adm').value) {
+        if ( window.loggedin_userid_global == document.getElementById('user_id_adm').value) {
             requestObj.last_update_date = new Date().toLocaleDateString();
         }
         else {
@@ -601,17 +702,17 @@ function saveResident(pageName) {
     }
 
     if ( isNaN(requestObj.bike_count) || requestObj.bike_count < 0 ) {
-        alert('Invalid content in number of bikes');
+        showMsgBox( gettext('Invalid content in number of bikes') );
         return;
     }
 
     if ( requestObj.vehicles[0].year < 1900) {
-        alert('Year of vehicle 1 must be 1900 or later');
+        showMsgBox( gettext('Year of vehicle 1 must be 1900 or later') );
         return;
     }
 
     if ( requestObj.vehicles[1].year < 1900) {
-        alert('Year of vehicle 2 must be 1900 or later');
+        showMsgBox( gettext('Year of vehicle 2 must be 1900 or later') );
         return;
     }
 
@@ -654,7 +755,7 @@ function uploadPictureFiles(name, fileControl, barControl) {
     let files = document.getElementById(fileControl).files;
 
     if (files.length == 0) {
-        alert('Please select the folder where your pictures are');
+        showMsgBox('Please select the folder where your pictures are');
         return;
     }
 
@@ -664,19 +765,19 @@ function uploadPictureFiles(name, fileControl, barControl) {
         contact = document.getElementById('contact').value;
         price = document.getElementById('price').value;
         if (unit.trim().length == 0) {
-            alert('Unit is a required field');
+            showMsgBox( gettext('Unit is a required field') );
             return;
         }
         if (title.trim().length == 0) {
-            alert('Title is a required field');
+            showMsgBox( gettext('Title is a required field') );
             return;
         }
         if (contact.trim().length == 0) {
-            alert('Contact is a required field');
+            showMsgBox( gettext('Contact is a required field') );
             return;
         }
         if (price.trim().length == 0) {
-            alert('Price is a required field');
+            showMsgBox( gettext('Price is a required field') );
             return;
         }
     }
@@ -685,18 +786,18 @@ function uploadPictureFiles(name, fileControl, barControl) {
         title = document.getElementById('title').value;
         event_date = document.getElementById('event_date').value;
         if (title.trim().length == 0) {
-            alert('Title is a required field');
+            showMsgBox( gettext('Title is a required field') );
             return;
         }
         if (event_date.trim().length == 0) {
-            alert('Event date is a required field');
+            showMsgBox( gettext('Event date is a required field') );
             return;
         }
     }
 
     // test to make sure the user chose a file
     if (files == undefined || files == "") {
-        alert('Please select a file before clicking the upload button.');
+        showMsgBox( gettext('Please select a file before clicking the upload button.') );
         return;
     }
 
@@ -763,7 +864,7 @@ function uploadPictureFiles(name, fileControl, barControl) {
     request.onreadystatechange = () => {
         if (request.readyState == 4 && request.status == 200) {
             progressBar.value = 100;
-            alert(files.length + ' pictures successfully uploaded');
+            showMsgBoxSuccess(files.length + ' ' + gettext('pictures successfully uploaded') );
             progressBar.style.display = "none";
             location.reload();
         }
@@ -816,12 +917,12 @@ function uploadFinancialStatement() {
     month = document.getElementById("rep-month").value.trim();
     year = document.getElementById("rep-year").value.trim();
     if (month.length > 2 || year.length != 4) {
-        alert("The size of your Month or Year field is incorrect. Please fix it.");
+        showMsgBox( gettext("The size of your Month or Year field is incorrect.") );
         return;
     }
     month = parseInt(month, 10);
     if (month > 12 || month < 1) {
-        alert("The Month field is incorrect. Please fix it.");
+        showMsgBox( gettext("The Month field is incorrect. Please fix it.") );
         return;
     }
     if (month.length == 1) {
@@ -838,7 +939,7 @@ function uploadFileProgress(convname, fileControl, barControl) {
 
     // test to make sure the user chose a file
     if (file == undefined || file == "") {
-        alert('Please select a file before clicking the upload button.');
+        showMsgBox( gettext('Please select a file before clicking the upload button.') );
         return;
     }
 
@@ -877,7 +978,7 @@ function uploadFileProgress(convname, fileControl, barControl) {
     request.onreadystatechange = () => {
         if (request.readyState == 4 && request.status == 200) {
             progressBar.value = 100;
-            alert('File '+file.name + ' successfully uploaded');
+            showMsgBoxSuccess( gettext('File') + ' ' + file.name + ' ' + gettext('successfully uploaded') );
             progressBar.style.display="none";
             location.reload(true);
         }
@@ -892,7 +993,7 @@ function uploadLink() {
     var link_descr = document.getElementById('link_descr').value.trim();
 
     if ( link_url.length == 0  ||  link_descr.length == 0 ) {
-        alert("A link and its description are required fields");
+        showMsgBox( gettext("A link and its description are required fields") );
         return;
     }
 
@@ -907,15 +1008,15 @@ function uploadLink() {
 
       if (request.status >= 200 && request.status < 400) {
           if (json.response.status == 'error') {
-              alert('error uploading a new link');
+              showMsgBox( gettext('error uploading a new link') );
           }
           else {
-              alert('Link successfully uploaded to the server');
+              showMsgBoxSuccess( gettext('Link successfully uploaded to the server') );
               location.reload(true);
           }
       }
       else {
-          alert('Error uploading the link');
+          showMsgBox( gettext('Error uploading the link') );
       }
 
       return;
@@ -929,67 +1030,6 @@ function uploadLink() {
     request.send(jsonStr);
 }
 
-
-function updateSystemSettings() {
-    condo_name = document.getElementById('condo-name').value.trim();
-    condo_tagline = document.getElementById('condo-tagline').value.trim();
-    condo_address = document.getElementById('condo-address').value.trim();
-    condo_zip = document.getElementById('condo-zip').value.trim();
-    condo_location = document.getElementById('condo-location').value.trim();
-    home_page_title = document.getElementById('home-page-title').value.trim();
-    home_page_text = document.getElementById('home-page-text').value.trim();
-    about_page_title = document.getElementById('about-page-title').value.trim();
-    about_page_text = document.getElementById('about-page-text').value.trim();
-
-    if ( condo_name.length == 0  ||  condo_tagline.length == 0  ||  condo_address.length == 0  ||  condo_location.length == 0 ) {
-        alert("Condo Name, Tagline, Address, ZIP and Location are required fields");
-        return;
-    }
-
-    if ( !isInteger(condo_zip) ) {
-       alert('ZIP must be size 5 or 8 and only digits');
-       return;
-    }
-
-    // here we make a request to "upload_link"
-    var request = new XMLHttpRequest();
-    post_url = "/" + window.loggedin_tenant_global + "/update_system_settings";
-    request.open('POST', post_url, true)
-
-    request.onload = function () {
-      // Begin accessing JSON data here
-      var json = JSON.parse(this.response);
-
-      if (request.status >= 200 && request.status < 400) {
-          if (json.response.status == 'error') {
-              alert('error uploading system settings');
-          }
-          else {
-              alert('Settings successfully uploaded to the server');
-              location.reload(true);
-          }
-      }
-      else {
-          alert('Error uploading the settings');
-      }
-
-      return;
-    }
-
-    var requestObj = new Object();
-    requestObj.condo_name = condo_name;
-    requestObj.condo_tagline = condo_tagline;
-    requestObj.condo_address = condo_address;
-    requestObj.condo_zip = condo_zip;
-    requestObj.condo_location = condo_location;
-    requestObj.home_page_title = home_page_title;
-    requestObj.about_page_title = about_page_title;
-    requestObj.home_page_text = home_page_text;
-    requestObj.about_page_text = about_page_text;
-    jsonStr = '{ "request": ' + JSON.stringify(requestObj) + '}';
-    request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-    request.send(jsonStr);
-}
 
 function isInteger(strNumber) {
   return !isNaN(parseInt(strNumber)) && isFinite(strNumber);

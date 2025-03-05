@@ -18,6 +18,68 @@ msgstr ""
 "Generated-By: Babel 2.16.0\n"
 
 
+# for Javascript code
+msgid "Main occupant's name cannot be blank"
+msgstr "Nome do principal ocupante é obrigatório"
+
+#: templates/fines.html
+msgid "Fines"
+msgstr "Multas"
+
+msgid "Open/Close the List of Fines Already Issued"
+msgstr "Abrir/Fechar a Lista de Multas Já Emitidas"
+
+msgid "Issue a New Fine"
+msgstr "Emitir Uma Nova Multa"
+
+msgid "select one"
+msgstr "escolha um"
+
+msgid "User"
+msgstr "Usuário"
+
+msgid "Amount"
+msgstr "Valor"
+
+msgid "Due Date"
+msgstr "Vencimento"
+
+msgid "Add This Fine and Notify User"
+msgstr "Adicionar Esta Multa e Notificar Usuário"
+
+msgid "delete"
+msgstr "deletar"
+
+msgid "mark"
+msgstr "marcar"
+
+msgid "remind"
+msgstr "lembrete"
+
+msgid "unpaid"
+msgstr "a receber"
+
+msgid "List of fines and payments to receive"
+msgstr "Lista de multas e pagamentos a receber"
+
+msgid "delete this fine"
+msgstr "deletar esta multa"
+
+msgid "mark this as paid"
+msgstr "marcar multa como paga"
+
+msgid "send reminder to user"
+msgstr "enviar lembrete ao usuário"
+
+
+#: templates/reservations.html
+msgid "Reservations of Common Areas"
+msgstr "Reservas de Áreas Comuns"
+
+msgid "Reservations"
+msgstr "Reservas"
+
+
 #: templates/home-root.html
 msgid "Welcome to the CondoSpace App"
 msgstr "Bem-vindo ao CondoSpace App"
@@ -115,6 +177,8 @@ msgstr "Por exemplo, digite Limeira, SP"
 msgid "ZIP of the condominium"
 msgstr "CEP do condomínio"
 
+msgid "UNLICENSED"
+msgstr "NÃO-LICENCIADO"
 
 #: templates/home.html:52
 msgid "Home"
@@ -150,8 +214,8 @@ msgstr "Sair"
 msgid "About"
 msgstr "Sobre"
 
-msgid "This picture as well as the logo picture must be changed in the Maintenance page"
-msgstr "Tanto a foto abaixo quanto o logo sobre o menu devem ser mudados na página Manutenção"
+msgid "This picture as well as the logo picture must be changed"
+msgstr "Tanto a foto abaixo quanto o logo sobre o menu devem ser mudados"
 
 
 #: templates/about.html
@@ -184,8 +248,14 @@ msgstr "A melhor maneira é registrar o seu Condomínio ou Associação conosco 
 msgid "That way you can have full access to all features to see if it works for you."
 msgstr "Desta maneira você terá completo acesso à todos os recursos e poderá ver se atende as suas necessidades."
 
-msgid "Alternatively, you can go to the 'demo' website <a href='https://condospace.app/demo' target='blank'>https://condospace.app/demo</a>. Accessing it that way shows you what everyone in the public sees."
-msgstr "Outra opção (menos desejável) é ir para a página do site demo <a href='https://condospace.app/demo' target='blank'>https://condospace.app/demo</a>. Acessá-lo deste modo mostrará o que o grande público ver."
+msgid "Alternatively, you can go to the 'demo' website <a href='https://condospace.app/ametista' target='blank'>https://condospace.app/ametista</a>, with limited experience because, that way, you will only see what everyone in the public sees."
+msgstr "Outra opção (menos desejável) é ir para a página do site demo <a href='https://condospace.app/ametista' target='blank'>https://condospace.app/ametista</a>, com experiência limitada, porque acessando deste modo você verá apenas o que o grande público ver."
+
+msgid "Ability to issue Fines"
+msgstr "Módulo de cobrança de multas"
+
+msgid "Make reservations of common areas (soon)"
+msgstr "Fazer reservas de áreas comuns (breve)"
 
 msgid "Here's how it works"
 msgstr "Eis como funciona"
@@ -346,6 +416,9 @@ msgstr "Adicionar um novo ítem"
 
 msgid "Listing Info"
 msgstr "Informação do ítem"
+
+msgid "Select a Unit"
+msgstr "Selecione um Usuário"
 
 msgid "Select a Unit/User"
 msgstr "Selecione um Apartamento/Usuário"
@@ -855,6 +928,30 @@ msgstr "Atualizar Configurações"
 
 msgid "Multiline text"
 msgstr "Texto de múltiplas linhas"
+
+msgid "Fine Payment Request Text"
+msgstr "Texto da Solicitação de Pagamento de Multa"
+
+msgid "PIX Key"
+msgstr "Chave PIX"
+
+msgid "Email Title"
+msgstr "Título do Email"
+
+msgid "Email Text"
+msgstr "Texto do Email"
+
+msgid "Title of the fine notification email"
+msgstr "Título do email de notificação da multa"
+
+msgid "Body of the fine notification email"
+msgstr "Corpo do email de notificação da multa"
+
+msgid "The text of the email sent to the user may be configured"
+msgstr "O corpo do email enviado ao morador pode ser configurado"
+
+msgid "here"
+msgstr "aqui"
 
 
 

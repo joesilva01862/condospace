@@ -56,16 +56,19 @@ class AWS():
             obj_list.append(obj_name)
         return obj_list
 
-                
+
     def is_file_found(self, file_path):
-        response = self.s3.list_objects(Bucket=self.bucket_name, Prefix=f"{self.prefix}/{file_path}")
+        full_path = f"{self.prefix}/{file_path}"
+        response = self.s3.list_objects(Bucket=self.bucket_name, Prefix=full_path)
         if 'ETag' in str(response):
             return True
         else:
             return False
-                      
+
+
     def read_text_obj(self, file_path):
-        response = self.s3.get_object(Bucket=self.bucket_name, Key=f"{self.prefix}/{file_path}")
+        full_path = f"{self.prefix}/{file_path}"
+        response = self.s3.get_object(Bucket=self.bucket_name, Key=full_path)
         # Read the object’s content as text
         object_content = response["Body"].read().decode("utf-8")
         return object_content
@@ -80,7 +83,8 @@ class AWS():
 
     def upload_text_obj(self, file_path, data):
          bin_data = BytesIO(bytes(data, 'utf-8'))
-         self.s3.upload_fileobj(bin_data, self.bucket_name, f"{self.prefix}/{file_path}")
+         full_path = f"{self.prefix}/{file_path}"
+         self.s3.upload_fileobj(bin_data, self.bucket_name, full_path)
 
 
     def upload_binary_obj(self, file_path, data):

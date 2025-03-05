@@ -2,8 +2,10 @@
 function onLoadAction() {
     window.loggedin_id_global = document.getElementById('loggedin-id').value;
     window.loggedin_userid_global = document.getElementById('loggedin-userid').value;
+    window.loggedin_unit_global = document.getElementById('loggedin-unit').value;
     window.loggedin_name_global = document.getElementById('loggedin-name').value;
     window.loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
+    window.loggedin_lang_global = document.getElementById('loggedin-lang').value;
 }
 
 /* this makes the text be only numbers, no decimal sign */
@@ -32,7 +34,7 @@ function uploadFileProgress(convname, fileControl, barControl) {
 
     // test to make sure the user chose a file
     if (file == undefined || file == "") {
-        alert('Please select a file before clicking the upload button.');
+        showMsgBox( gettext('Please select a file before clicking the upload button.') );
         return;
     }
 
@@ -71,7 +73,7 @@ function uploadFileProgress(convname, fileControl, barControl) {
     request.onreadystatechange = () => {
         if (request.readyState == 4 && request.status == 200) {
             progressBar.value = 100;
-            alert('File '+file.name + ' successfully uploaded');
+            showMsgBoxSuccess( gettext('File') + ' ' + file.name + ' ' + gettext('successfully uploaded') );
             progressBar.style.display="none";
             location.reload();
         }

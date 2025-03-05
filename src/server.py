@@ -35,6 +35,7 @@ import staticvars
 from users import User, UsersRepository
 from pdf import PDF
 from datetime import timedelta, datetime
+import time
 import calendar
 from flask import Flask, request, session, abort, redirect, Response, url_for, render_template, send_from_directory, flash, session
 from flask_login import LoginManager, login_required, login_user, logout_user, current_user
@@ -102,12 +103,12 @@ UNPROTECTED_FOLDER = f"{UPLOADED_FOLDER}/unprotected"
 CONFIG_FILE =   f"{CONFIG_FOLDER}/config.json"
 
 # all files in the "serverfiles" folder
-INFO_FILE =     f"{SERVER_FOLDER}/info.json"
+INFO_FILE =     f"info.json"
+FINES_FILE =  f"fines.json"
 LINKS_FILE =    f"{SERVER_FOLDER}/links.json"
 ANNOUNCS_FILE = f"{SERVER_FOLDER}/announcs.dat"
 LOG_FILE =      f"{SERVER_FOLDER}/messages.log"
 RESIDENTS_FILE = f"{SERVER_FOLDER}/residents.json"
-CUSTOMERS_FILE = f"customers.json"
 
 
 CENSUS_FORM_PDF_FILE_NAME = 'census_form.pdf'
@@ -160,15 +161,11 @@ lock = Lock()
 
 cgitb.enable()
 
-# the customers.json file is for FUTURE USE
-def add_to_customers_file(tenant, description):
-    print(f"in add_to_customers_file(): tenant: {tenant}, description: {description}")
-    customers_json = get_json_from_file(f"{CUSTOMERS_FILE}")
-    customers_json[tenant] = description
-    aws.upload_text_obj(f"{CUSTOMERS_FILE}", json.dumps(customers_json))
-
 def is_tenant_found(tenant):
-    if aws.is_file_found(f"{tenant}/{INFO_FILE}"):
+    if not aws.is_file_found(f"{INFO_FILE}"):
+        return False
+    info_json = get_json_from_file(f"{INFO_FILE}")
+    if tenant in info_json['config']:
         global tenant_global
         tenant_global = tenant
         return True
@@ -200,14 +197,18 @@ def get_tenant():
     #log(f"header host: {url},   tenant: {tenant},  domain: {config['domain']}")
     return tenant
 
+# in info_data we return only that specific tenant's info data
 def get_info_data(tenant):
-    # info_data = session.get(INFO_DATA_STRING)
-    # if info_data != None:
-    #     return info_data
-    # retrieve data from S3
+    if not aws.is_file_found(f"{INFO_FILE}"):
+        print(f"get_info_data(): file not found: {INFO_FILE},  tenant: {tenant}")
+        return None
+
     try:
-        json_obj = get_json_from_file(f"{tenant}/{INFO_FILE}")
-        info_data = json_obj['config']
+        json_obj = get_json_from_file(f"{INFO_FILE}")
+        if tenant in json_obj['config']:
+            info_data = json_obj['config'][tenant]
+        else:
+            return None
         if current_user.is_anonymous:
             is_authenticated = False
         else:
@@ -217,24 +218,10 @@ def get_info_data(tenant):
         info_data['loggedin-userdata'] = get_current_user_data()
         return info_data
     except:
-        log(get_tenant(), f"Error trying to read file {get_tenant()}/{INFO_FILE}")
+        print(f"get_info_data(): unable to get info for tenant: {tenant}, file {INFO_FILE}")
+        log(get_tenant(), f"Error trying to read file {INFO_FILE}")
         exit(1)
 
-
-def get_info_data_self(tenant):
-    # info_data = session.get(INFO_DATA_STRING)
-    # if info_data != None:
-    #     return info_data
-    # retrieve data from S3
-    try:
-        json_obj = get_json_from_file(f"{tenant}/{INFO_FILE}")
-        info_data = json_obj['config']
-        # session[INFO_DATA_STRING] = info_data
-        return info_data
-    except:
-        log(get_tenant(), f"Error trying to read file {get_tenant()}/{INFO_FILE}")
-        exit(1)
-    # set tenant var to the session
 
 def get_current_user_data():
     if current_user.is_anonymous:
@@ -328,13 +315,15 @@ def reduce_image_enh(img_bytes, nw, nh):
     img_bytes = image_to_byte_array(resized_img, img_format)
     return img_format, img_bytes
 
-def get_unit_list():
+def get_unit_list(include_adm=True):
     def sort_by_userid(obj):
         return obj['userid']
     load_users(get_tenant())
     unit_list = []
     for user in users_repository.get_users(get_tenant()):
-        unit_list.append({'unit': user.unit, 'userid': user.userid, 'res_name': user.name, 'contact': user.email})
+        if user.type == staticvars.USER_TYPE_ADMIN and include_adm == False:
+            continue
+        unit_list.append({'unit': user.unit, 'userid': user.userid, 'res_name': user.name, 'contact': user.email, 'phone': user.phone})
     unit_list.sort(key=sort_by_userid)
     return unit_list
 
@@ -346,6 +335,7 @@ def get_unit_list():
 def load_users(tenant):
     if users_repository.is_tenant_loaded(tenant):
         return
+    print(f"load_users(): tenant {tenant}")
     users_repository.load_users(tenant)
     print(f"just loaded tenant {tenant} into users_repository")
 
@@ -508,6 +498,10 @@ def check_security(tenant):
         error_code = USER_NOT_AUTHENTICATED_CODE
         ret_page = redirect(f"/{tenant}/home")
 
+    # check of the client has another session with a user logged in
+    if not current_user.is_authenticated:
+        error_code = USER_NOT_AUTHENTICATED_CODE
+
     return ret_page, error_code
 
 
@@ -540,6 +534,264 @@ def setup(tenant):
     lock.release()
     return render_template("setup.html", tenant=tenant, units=units, info_data=info_data)
 
+
+#------------------------------------------------------------------------------------------
+#   Payment related routes
+#------------------------------------------------------------------------------------------
+@app.route('/<tenant>/fines')
+@login_required
+def payments(tenant):
+    lock.acquire()
+    page, check_code = check_security(tenant)
+    if check_code != SECURITY_SUCCESS_CODE:
+        lock.release()
+        return page
+
+    info_data = get_info_data(tenant)
+    pay_json = get_json_from_file(f"{FINES_FILE}")
+    fines_list = []
+
+    if pay_json is not None and tenant in pay_json['fines']:
+        for user, payment in pay_json['fines'][tenant].items():
+            for fine_id, fine in payment['fines'].items():
+                entry = dict()
+                entry["user_id"] = user
+                entry["fine_id"] = fine_id
+                entry["name"] = fine['name']
+                entry["email"] = fine['email']
+                entry['descr'] = fine['descr']
+                entry['amount'] = fine['amount']
+                entry['due_date'] = fine['due_date']
+                entry['status'] = "unpaid" if fine['paid_date'] is None else f"paid {fine['paid_date']['d']}/{fine['paid_date']['m']}/{fine['paid_date']['y']}"
+                fines_list.append(entry)
+
+    units = get_unit_list(include_adm=False)
+    lock.release()
+    return render_template("fines.html", tenant=tenant, units=units, fines=fines_list, user_types=staticvars.user_types, info_data=info_data)
+
+
+@app.route('/<tenant>/savefine', methods=["POST"])
+def save_payment(tenant):
+    lock.acquire()
+    print(f"in save_payment(): tenant {tenant}")
+    page, check_code = check_security(tenant)
+    if check_code != SECURITY_SUCCESS_CODE:
+        lock.release()
+        return page
+
+    json_obj = request.get_json()
+    tenant_json = json_obj['payment']['tenant']
+
+    if tenant != tenant_json:
+        return_obj = json.dumps({'response': {'status': 'error', 'pid': os.getpid()}})
+        lock.release()
+        return return_obj
+
+    user_id = json_obj['payment']['user_id']
+    name = json_obj['payment']['name']
+    email = json_obj['payment']['email']
+    phone = json_obj['payment']['phone']
+    amount = json_obj['payment']['amount']
+    descr = json_obj['payment']['descr']
+    due_date_y = json_obj['payment']['due_date']['y']
+    due_date_m = json_obj['payment']['due_date']['m']
+    due_date_d = json_obj['payment']['due_date']['d']
+
+    fine_entry = {
+        "creation": get_epoch_from_now(),
+        'name': name,
+        'email': email,
+        "descr": descr,
+        "amount": amount,
+        "paid_amount": None,
+        "due_date": {"y": due_date_y, "m": due_date_m, "d": due_date_d},
+        "paid_date": None
+    }
+
+    # read the FINES_FILE to add an additional condo to it
+    if aws.is_file_found(f"{FINES_FILE}"):
+        pay_data = get_json_from_file(f"{FINES_FILE}")
+
+        # find the last fine_id for the user
+        if user_id in pay_data['fines'][tenant]:
+            fine_id = 0
+            for id, value in pay_data['fines'][tenant][user_id]['fines'].items():
+                id = int(id)
+                fine_id = id if id > fine_id else fine_id
+            fine_id += 1
+        else:
+            fine_id = 0
+
+        if tenant in pay_data['fines']:
+            if user_id in pay_data['fines'][tenant]:
+                pay_data['fines'][tenant][user_id]['fines'][fine_id] = fine_entry
+            else:
+                pay_data['fines'][tenant][user_id] = { "name": name, "email": email, "phone": phone, "fines": { fine_id: fine_entry } }
+        else:
+            pay_data['fines'] = { tenant: { user_id: { "name": name, "email": email, "phone": phone, "fines": { fine_id: fine_entry } } } }
+    else:
+        fine_id = 0
+        pay_data = { 'fines': { tenant: { user_id: { "name": name, "email": email, "phone": phone, "fines": { fine_id: fine_entry } } } } }
+
+    aws.upload_text_obj(f"{FINES_FILE}", json.dumps(pay_data))
+
+    if email:
+        info_data = get_info_data(tenant)
+        send_fine_notification(info_data, name, email, amount, descr, due_date_y, due_date_m, due_date_d)
+
+    return_obj = json.dumps({'response': {'status': 'success'}})
+    lock.release()
+    return return_obj
+
+
+@app.route('/<tenant>/setpayment', methods=["POST"])
+def set_payment(tenant):
+    lock.acquire()
+    print(f"in set_payment(): tenant {tenant}")
+    page, check_code = check_security(tenant)
+    if check_code != SECURITY_SUCCESS_CODE:
+        lock.release()
+        return page
+
+    json_obj = request.get_json()
+    tenant_json = json_obj['payment']['tenant']
+
+    if tenant != tenant_json:
+        return_obj = json.dumps({'response': {'status': 'error', 'pid': os.getpid()}})
+        lock.release()
+        return return_obj
+
+    user_id = json_obj['payment']['user_id']
+    fine_id = json_obj['payment']['fine_id']
+    date_year = json_obj['payment']['date']['y']
+    date_month = json_obj['payment']['date']['m']
+    date_day = json_obj['payment']['date']['d']
+
+    print(f"{date_year} / {date_month} / {date_day} {user_id} {fine_id}")
+
+    # read the FINES_FILE to add an additional condo to it
+    if not aws.is_file_found(f"{FINES_FILE}"):
+        return_obj = json.dumps({'response': {'status': 'error'}})
+    else:
+        pay_data = get_json_from_file(f"{FINES_FILE}")
+        pay_data['fines'][tenant][user_id]['fines'][fine_id]['paid_date'] = { 'y': date_year, 'm': date_month, 'd': date_day }
+        aws.upload_text_obj(f"{FINES_FILE}", json.dumps(pay_data))
+        return_obj = json.dumps({'response': {'status': 'success'}})
+    lock.release()
+    return return_obj
+
+@app.route('/<tenant>/deletefine', methods=["POST"])
+def delete_fine(tenant):
+    lock.acquire()
+    print(f"in delete_fine(): tenant {tenant}")
+    page, check_code = check_security(tenant)
+    if check_code != SECURITY_SUCCESS_CODE:
+        lock.release()
+        return page
+
+    json_obj = request.get_json()
+    prefix = "fine"
+    tenant_json = json_obj[prefix]['tenant']
+
+    if tenant != tenant_json:
+        return_obj = json.dumps({'response': {'status': 'error', 'pid': os.getpid()}})
+        lock.release()
+        return return_obj
+
+    user_id = json_obj[prefix]['user_id']
+    fine_id = json_obj[prefix]['fine_id']
+
+    print(f"user {user_id}    fine_id {fine_id}")
+
+    # read the FINES_FILE to add an additional condo to it
+    if not aws.is_file_found(f"{FINES_FILE}"):
+        return_obj = json.dumps({'response': {'status': 'error'}})
+    else:
+        pay_data = get_json_from_file(f"{FINES_FILE}")
+        if fine_id in pay_data['fines'][tenant][user_id]['fines']:
+            del pay_data['fines'][tenant][user_id]['fines'][fine_id]
+            aws.upload_text_obj(f"{FINES_FILE}", json.dumps(pay_data))
+        return_obj = json.dumps({'response': {'status': 'success'}})
+    lock.release()
+    return return_obj
+
+@app.route('/<tenant>/sendfinereminder', methods=["POST"])
+def send_fine_reminder(tenant):
+    lock.acquire()
+    print(f"in send_fine_reminder(): tenant {tenant}")
+    page, check_code = check_security(tenant)
+    if check_code != SECURITY_SUCCESS_CODE:
+        lock.release()
+        return page
+
+    info_data =  get_info_data(tenant)
+    json_obj = request.get_json()
+    prefix = "fine"
+    tenant_json = json_obj[prefix]['tenant']
+
+    if tenant != tenant_json:
+        return_obj = json.dumps({'response': {'status': 'error', 'pid': os.getpid()}})
+        lock.release()
+        return return_obj
+
+    user_id = json_obj[prefix]['user_id']
+    fine_id = json_obj[prefix]['fine_id']
+    name = json_obj[prefix]['name']
+    email = json_obj[prefix]['email']
+    amount = json_obj[prefix]['amount']
+    descr = json_obj[prefix]['descr']
+    due_date_y = json_obj[prefix]['due_date']['y']
+    due_date_m = json_obj[prefix]['due_date']['m']
+    due_date_d = json_obj[prefix]['due_date']['d']
+
+    # read the FINES_FILE to add an additional condo to it
+    if not aws.is_file_found(f"{FINES_FILE}"):
+        return_obj = json.dumps({'response': {'status': 'error'}})
+        lock.release()
+        return return_obj
+
+    pay_data = get_json_from_file(f"{FINES_FILE}")
+    if fine_id not in pay_data['fines'][tenant][user_id]['fines']:
+        return_obj = json.dumps({'response': {'status': 'error'}})
+        lock.release()
+        return return_obj
+
+    if email:
+        send_fine_notification(info_data, name, email, amount, descr, due_date_y, due_date_m, due_date_d)
+        print(f"end of send_contact_email()")
+        return_obj = json.dumps({'response': {'status': 'success'}})
+    else:
+        return_obj = json.dumps({'response': {'status': 'error', 'message': 'fine has no email address'}})
+
+    lock.release()
+    return return_obj
+
+def send_fine_notification(info_data, name, email, amount, descr, due_date_y, due_date_m, due_date_d):
+    condo_name = info_data['condo_name']
+    title = info_data['fine_title']
+    pix = info_data['pix_key']
+    text = info_data['fine_template']
+
+    if info_data['language'] == 'pt':
+        due_date = f"{due_date_d}/{due_date_m}/{due_date_y}"
+        body = replace_text(text, ['{name}', '{descr}', '{amount}', '{due_date}', '{pix}', '{condo_name}'], [name, descr, amount, due_date, pix, condo_name])
+    elif info_data['language'] == 'en':
+        due_date = f"{due_date_m}/{due_date_d}/{due_date_y}"
+        body = replace_text(text, ['{name}', '{descr}', '{amount}', '{due_date}', '{condo_name}'], [name, descr, amount, due_date, condo_name])
+    else:
+        due_date = f"{due_date_d}/{due_date_m}/{due_date_y}"
+        body = replace_text(text, ['{name}', '{descr}', '{amount}', '{due_date}', '{condo_name}'], [name, descr, amount, due_date, condo_name])
+
+    send_email_redmail(email, title, body)
+    print(f"end of send_fine_notification()")
+
+def replace_text(text, field_names, field_values):
+    i = 0
+    final_text = text
+    for name in field_names:
+        final_text = final_text.replace(name, field_values[i])
+        i += 1
+    return final_text
 
 @app.route('/<tenant>/about')
 def about(tenant):
@@ -595,21 +847,53 @@ def get_announc_list(tenant):
 @login_required
 def get_system_settings(tenant):
     lock.acquire()
+    print(f"here in get_system_settings()")
     ret_tenant = get_tenant()
     if ret_tenant == TENANT_NOT_FOUND:
         lock.release()
         return render_template("condo_not_found.html", tenant=tenant)
-    info_obj = get_json_from_file(f"{get_tenant()}/{INFO_FILE}")
+    info_data = get_info_data(tenant)
     home_text = ''
-    for line in info_obj['config']['home_message']['lines']:
+    for line in info_data['home_message']['lines']:
         home_text += f"{line}\n"
     about_text = ''
-    for line in info_obj['config']['about_message']['lines']:
+    for line in info_data['about_message']['lines']:
         about_text += f"{line}\n"
-    info_obj['config']['home_message']['text'] = home_text
-    info_obj['config']['about_message']['text'] = about_text
+    info_data['home_message']['text'] = home_text
+    info_data['about_message']['text'] = about_text
+
     lock.release()
-    return json.dumps(info_obj)
+    return json.dumps(info_data)
+
+@app.route('/<tenant>/update_system_settings', methods=["POST"])
+@login_required
+def update_settings(tenant):
+    lock.acquire()
+    print(f"here in upload_settings()")
+    json_req = request.get_json()
+    info = get_json_from_file(f"{INFO_FILE}")
+    info['config'][tenant]['condo_name'] = json_req['request']['condo_name']
+    info['config'][tenant]['tagline'] = json_req['request']['condo_tagline']
+    info['config'][tenant]['condo_location'] = json_req['request']['condo_location']
+    info['config'][tenant]['address'] = json_req['request']['condo_address']
+    info['config'][tenant]['zip'] = json_req['request']['condo_zip']
+    info['config'][tenant]['home_message']['title'] = json_req['request']['home_page_title']
+    info['config'][tenant]['about_message']['title'] = json_req['request']['about_page_title']
+    home_text = json_req['request']['home_page_text'].split('\n')
+    about_text = json_req['request']['about_page_text'].split('\n')
+    lat, long = get_lat_long(json_req['request']['condo_location'])
+    print(f"lat {lat},  long {long}")
+    info['config'][tenant]['geo']['lat'] = lat
+    info['config'][tenant]['geo']['long'] = long
+    info['config'][tenant]['home_message']['lines'] = [ msg for msg in home_text if len(msg.strip()) > 0]
+    info['config'][tenant]['about_message']['lines'] = [ msg for msg in about_text if len(msg.strip()) > 0]
+    info['config'][tenant]['pix_key'] = json_req['request']['pix_key']
+    info['config'][tenant]['fine_template'] = json_req['request']['fine_template']
+    info['config'][tenant]['fine_title'] = json_req['request']['fine_email_title']
+    aws.upload_text_obj(f"{INFO_FILE}", json.dumps(info))
+    return_obj = json.dumps({'response': {'status': 'success'}})
+    lock.release()
+    return return_obj
 
 
 @app.route('/<tenant>/announcs')
@@ -757,23 +1041,16 @@ def pics(tenant):
 
 @app.route('/<tenant>/logout', methods=['GET'])
 def logout(tenant):
-    # tenant_s = session['tenant'] if 'tenant' in session else None
-    # userid_s = session['userid'] if 'userid' in session else None
-    # print(f"logout(): session: {session}, tenant_s {tenant_s}, userid_s {userid_s}")
     print(f"logout(): session: {session}")
 
     if not current_user.is_authenticated:
         return redirect(f"/{tenant}/home")
 
     # from here on down we know that an user is logged in
-    print(f"logged in user: {current_user.userid}")
+    print(f"user to be logged out: {current_user.userid}")
 
-    # if tenant is not None:
-    #     msg = f'user id {current_user.id}, {current_user.userid} logged out'
-    #     log(tenant_global, msg)
     current_user.authenticated = False
     userid = current_user.userid  # we need to save the userid BEFORE invoking logout_user()
-    # remove_from_logged_in_users(current_user)
     logout_user()
     session['tenant'] = None
     return render_template("logout.html", loggedout_user=userid, info_data=get_info_data(tenant))
@@ -1108,34 +1385,6 @@ def upload_link(tenant):
     links_dict = {"links": links['links']}
     links_dict['links'][json_req['request']['link_descr']] = { 'url': json_req['request']['link_url'] }
     aws.upload_text_obj(f"{get_tenant()}/{LINKS_FILE}", json.dumps(links_dict))
-    return_obj = json.dumps({'response': {'status': 'success'}})
-    lock.release()
-    return return_obj
-
-
-@app.route('/<tenant>/update_system_settings', methods=["POST"])
-@login_required
-def update_settings(tenant):
-    lock.acquire()
-    print(f"here in upload_settings()")
-    json_req = request.get_json()
-    info = get_json_from_file(f"{get_tenant()}/{INFO_FILE}")
-    info['config']['condo_name'] = json_req['request']['condo_name']
-    info['config']['tagline'] = json_req['request']['condo_tagline']
-    info['config']['condo_location'] = json_req['request']['condo_location']
-    info['config']['address'] = json_req['request']['condo_address']
-    info['config']['zip'] = json_req['request']['condo_zip']
-    info['config']['home_message']['title'] = json_req['request']['home_page_title']
-    info['config']['about_message']['title'] = json_req['request']['about_page_title']
-    home_text = json_req['request']['home_page_text'].split('\n')
-    about_text = json_req['request']['about_page_text'].split('\n')
-    lat, long = get_lat_long(json_req['request']['condo_location'])
-    print(f"lat {lat},  long {long}")
-    info['config']['geo']['lat'] = lat
-    info['config']['geo']['long'] = long
-    info['config']['home_message']['lines'] = [ msg for msg in home_text if len(msg.strip()) > 0]
-    info['config']['about_message']['lines'] = [ msg for msg in about_text if len(msg.strip()) > 0]
-    aws.upload_text_obj(f"{get_tenant()}/{INFO_FILE}", json.dumps(info))
     return_obj = json.dumps({'response': {'status': 'success'}})
     lock.release()
     return return_obj
@@ -1518,9 +1767,10 @@ def upload(tenant):
 
         if uploaded_convname == 'homepic':
             info_data['default_home_pic'] = False
-            mod_data = {'config': info_data}
-            print(f"info data: \n{mod_data}")
-            aws.upload_text_obj(f"{tenant}/{INFO_FILE}", json.dumps(mod_data))
+            print(f"info data: \n{info_data}")
+            info_obj = get_json_from_file(f"{INFO_FILE}")
+            info_obj['config'][tenant] = info_data
+            aws.upload_text_obj(f"{INFO_FILE}", json.dumps(info_obj))
 
         lock.release()
         return render_template("upload.html", user_types=staticvars.user_types, info_data=info_data)
@@ -1541,6 +1791,15 @@ def upload(tenant):
                                links=links['links'].items(),
                                user_types=staticvars.user_types,
                                info_data=info_data)
+
+
+@app.route('/<tenant>/reservations', methods=['GET'])
+@login_required
+def reservations(tenant):
+    print("here in reservations()")
+    info_data = get_info_data(tenant)
+    return render_template("reservations.html", user_types=staticvars.user_types, info_data=info_data)
+
 
 @app.route('/<tenant>/generatepdf', methods=['GET'])
 def gen_pdf(tenant):
@@ -1578,9 +1837,21 @@ def gen_pdf(tenant):
     # update the info.json file
     date = datetime.today().strftime('%d-%b-%Y')
     info_data[CENSUS_FORMS_DATE_STRING] = date
-    info_data = {"config": info_data}
-    aws.upload_text_obj(f"{tenant}/{INFO_FILE}", json.dumps(info_data))
+    info_obj = get_json_from_file(f"{INFO_FILE}")
+    info_obj['config'][tenant] = info_data
+    aws.upload_text_obj(f"{INFO_FILE}", json.dumps(info_obj))
     return_obj = json.dumps({'response': {'status': 'success'}})
+    lock.release()
+    return return_obj
+
+@app.route('/<tenant>/checkpdf', methods=['GET'])
+def download_pdf(tenant):
+    lock.acquire()
+    if not aws.is_file_found(f"{tenant}/{CENSUS_FORMS_PDF_FULL_PATH}"):
+        return_obj = json.dumps({'response': {'status': 'file_not_found'}})
+    else:
+        return_obj = json.dumps({'response': {'status': 'success', 'pdf_full_path': f"{tenant}/{CENSUS_FORMS_PDF_FULL_PATH}"}})
+    #return send_from_directory('static', rel_path)
     lock.release()
     return return_obj
 
@@ -1591,7 +1862,7 @@ def login_tenant(tenant):
     lock.acquire()
 
     # check to see if the tenant even exists in our database
-    if not aws.is_file_found(f"{tenant}/{INFO_FILE}"):
+    if not is_tenant_found(tenant):
         page_content = render_template("condo_not_found.html", tenant=tenant)
         lock.release()
         return page_content
@@ -1670,10 +1941,11 @@ def forgot_password(tenant):
     lock.acquire()
     print(f"here in forgot_password(): {tenant}")
 
-    page, check_code = check_security(tenant)
-    if check_code != SECURITY_SUCCESS_CODE:
-        lock.release()
-        return page
+    # page, check_code = check_security(tenant)
+    # if check_code != SECURITY_SUCCESS_CODE:
+    #     print("security isnt success")
+    #     lock.release()
+    #     return page
 
     info_data = get_info_data(tenant)
     if request.method == 'GET':
@@ -1789,14 +2061,14 @@ def register_condo():
     else:
         userid = f"{userid}_adm"
 
-    if aws.is_file_found(f"{condo_id}/{INFO_FILE}"):
+    if is_tenant_found(condo_id):
         return_obj = {'status': 'error', 'message': f"{condo_id} already exists in our system"}
         ret_json = json.dumps({'response': return_obj})
         print("condo already exists...returning")
         lock.release()
         return ret_json
 
-    print(f"file {condo_id}/{INFO_FILE} not found. We are creating this file now....")
+    print(f"tenant {condo_id} not found. We are creating it now....")
 
     lat, long = get_lat_long(condo_location)
     if lat is None or long is None:
@@ -1808,36 +2080,78 @@ def register_condo():
     epoch_date_time = datetime.fromtimestamp(epoch_timestamp)
     print("Converted Datetime:", epoch_date_time)
 
+    if pref_language == 'pt':
+        pix_key = "12345678"
+        fine_title = "Notificação de Multa Condominial"
+        fine_template = """
+        Prezado(a) {name},
+    
+        Esta é uma notificação de que o senhor(a) tem uma multa por {descr},
+        a ser paga no valor de {amount}, com data de vencimento em {due_date}.
+    
+        O valor pode ser pago via PIX cuja chave é {pix}.
+    
+        Muito obrigado.
+    
+        Administração, {condo_name}.
+        """
+    elif pref_language == 'en':
+        pix_key = ''
+        fine_title = "Notification of Condominium Fine"
+        fine_template = """
+        Dear {name},
+        This is a notification that you have been issued a fine in the amount of {amount},
+        with due date on {due_date}.
+
+        The amount may be paid with credit card or via check.
+
+        Thank you.
+
+        Board of Directors of {condo_name}.
+        """
+    else:
+        pix_key = ''
+        fine_title = ''
+        fine_template = ''
+
     condo_info = {
-        "config": {
-            'registration_date': epoch_timestamp,
-            'default_home_pic': use_default_img,
-            "language": pref_language,
-            "address": condo_address,
-            "zip": condo_zip,
-            "census_forms_pdf_date": "06-Sep-2024",
-            "condo_location": condo_location,
-            "condo_name": condo_name,
-            "domain": condo_id,
-            "tagline": condo_tagline,
-            "geo": {"lat": lat, "long": long},
-            "home_message": {
-                "title": "Olá Pessoal.",
-                "lines": [
-                    f"Bem-vindo ao lindo {condo_name} em {condo_location}.",
-                    "Nós mal podemos esperar ver você aqui e, ao mesmo tempo, te fornecer informações muito úteis.",
-                    "Se você já for um residente aqui, documentos e informações estão a apenas alguns clicks."
-                ]
-            },
-            "about_message": {
-                "title": "Tudo Sobre Nós.",
-                "lines": [
-                    f"Nós somos uma pequena e vibrante associação localizada em {condo_location}.",
-                    "A nossa região proporciona o que há de melhor em qualidade de vida e segurança.",
-                    "Estamos localizados numa área nobre da cidade, rodeados pelo que há de melhor em gastronomia e compras de nível internacional, além de fácil acesso por ótimas estradas da região."
-                ]
-            }
-        }
+        "admin_name": user_full_name,
+        "admin_email": user_email,
+        "payment_link": "",
+        "license_pay_date": None,
+        "license_pay_amount": None,
+        "license_date": None,
+        "license_term": None,
+        'registration_date': epoch_timestamp,
+        'default_home_pic': use_default_img,
+        "language": pref_language,
+        "address": condo_address,
+        "zip": condo_zip,
+        "census_forms_pdf_date": "06-Sep-2024",
+        "condo_location": condo_location,
+        "condo_name": condo_name,
+        "domain": condo_id,
+        "tagline": condo_tagline,
+        "geo": {"lat": lat, "long": long},
+        "home_message": {
+            "title": "Olá Pessoal.",
+            "lines": [
+                f"Bem-vindo ao lindo {condo_name} em {condo_location}.",
+                "Nós mal podemos esperar ver você aqui e, ao mesmo tempo, te fornecer informações muito úteis.",
+                "Se você já for um residente aqui, documentos e informações estão a apenas alguns clicks."
+            ]
+        },
+        "about_message": {
+            "title": "Tudo Sobre Nós.",
+            "lines": [
+                f"Nós somos uma pequena e vibrante associação localizada em {condo_location}.",
+                "A nossa região proporciona o que há de melhor em qualidade de vida e segurança.",
+                "Estamos localizados numa área nobre da cidade, rodeados pelo que há de melhor em gastronomia e compras de nível internacional, além de fácil acesso por ótimas estradas da região."
+            ]
+        },
+        'pix_key': pix_key,
+        'fine_title': fine_title,
+        'fine_template': fine_template
     }
 
     admin_pass = f"{condo_id}@{epoch_timestamp}"
@@ -1931,11 +2245,18 @@ def register_condo():
 
     initial_links = { "links" : {}}
     initial_announcs = f"{get_timestamp()}: {condo_name} estabeleceu presença online."
-    aws.upload_text_obj(f"{condo_id}/{INFO_FILE}", json.dumps(condo_info))
     aws.upload_text_obj(f"{condo_id}/{RESIDENTS_FILE}", json.dumps(initial_resident))
     aws.upload_text_obj(f"{condo_id}/{LINKS_FILE}", json.dumps(initial_links))
     aws.upload_text_obj(f"{condo_id}/{ANNOUNCS_FILE}", initial_announcs)
-    add_to_customers_file(condo_id, f"{condo_name}, created on {get_timestamp()}")
+
+    # read the INFO_FILE to add an additional condo to it
+    if aws.is_file_found(f"{INFO_FILE}"):
+        info_data = get_json_from_file(f"{INFO_FILE}")
+        info_data['config'][condo_id] = condo_info
+    else:
+        info_data = { 'config': { condo_id: condo_info } }
+
+    aws.upload_text_obj(f"{INFO_FILE}", json.dumps(info_data))
 
     if use_default_img:
         home_pic = open("static/img/branding/home.jpg", "rb")
@@ -2032,6 +2353,18 @@ def log(tenant, msg):
 
 def get_timestamp():
     return datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+
+def get_epoch_from_now():
+    return calendar.timegm(datetime.now().timetuple())
+
+def get_epoch_from_string(date_string):
+    date_format = "%d-%m-%Y"
+    datetime_object = datetime.strptime(date_string, date_format)
+    epoch_timestamp = int(time.mktime(datetime_object.timetuple()))
+    return epoch_timestamp
+
+def get_string_from_epoch(epoch_timestamp):
+    return datetime.fromtimestamp(int(epoch_timestamp)).strftime('%d-%m-%Y')
 
 def send_email_relay_host(emailto, subject, body):
     TO = emailto
@@ -2186,15 +2519,23 @@ def before_request():
     # logged_in_users[current_user] = current_user
 
 # callback to reload the user object
-# userid is the sequential number given to a user when it is added to the system
+# internal_user_id is the sequential number given to a user when it is added to the system
 @login_manager.user_loader
-def load_user(composite_id):
-    tenant_s = session['tenant'] if 'tenant' in session else None
-    userid_s = session['userid'] if 'userid' in session else None
-    tenant = composite_id[:composite_id.find('-')]
-    print(f"load_user(): url: {request.path}, composite_id {composite_id}, tenant {tenant}, tenant_s {tenant_s}, user_s {userid_s}")
+def load_user(internal_user_id):
+    # tenant_s = session['tenant'] if 'tenant' in session else None
+    # userid_s = session['userid'] if 'userid' in session else None
+    # tenant = composite_id[:composite_id.find('-')]
+    # print(f"load_user(): url: {request.path}, composite_id {composite_id}, tenant {tenant}, tenant_s {tenant_s}, user_s {userid_s}")
+
+    print(f"internal_user_id: {internal_user_id}")
+    tenant = get_tenant()
+    print(f"tenant: {tenant}")
+
+    if tenant == 'root':
+        return None
+
     load_users(tenant)
-    user = users_repository.get_user_by_id(tenant, composite_id)
+    user = users_repository.get_user_by_id(tenant, internal_user_id)
     if user is None:
         print("in load_user(): failure in getting the user")
         log(tenant, "in load_user(): something is wrong with our user\n")
@@ -2205,7 +2546,7 @@ def load_user(composite_id):
 
 
 def get_files(folder, pattern):
-    print(f"in get_files(): tenant: {get_tenant()}")
+    #print(f"in get_files(): tenant: {get_tenant()}")
     files = aws.get_file_list_folder(get_tenant(), folder)
     if pattern:
         arr = [x for x in files if x.startswith(f"{BUCKET_PREFIX}/{get_tenant()}/{folder}/{pattern}")]
@@ -2217,9 +2558,6 @@ def get_files(folder, pattern):
     files_arr.sort()
     return files_arr
     
-
-def get_file(file_path):
-    return aws.read_binary_obj(f"{get_tenant()}/{file_path}")
 
 # This is invoked by Babel
 def get_locale():
@@ -2248,12 +2586,6 @@ def translate():
 babel = Babel(app, locale_selector=get_locale)
 _ = lazy_gettext
 
-# text = _('Main Occupant')
-# print(f"type: {type(text)}")
-# print(f"translated: {text}")
-# print(f"translated: {str(lazy_gettext('Main Occupant'))}")
-# print(f"translated: {gettext('Main Occupant')}")
-
 def test_new_users_rep():
     users_repo = UsersRepository(aws)
     users_repo.load_users('belavista')
@@ -2266,7 +2598,7 @@ def test_new_users_rep():
     print(f"user unit 0:       id {user.id}, userid {user.userid}, unit {user.unit}, name {user.name}, email {user.email}")
     user = users_repo.get_user_by_userid('belavista', 'unitA3')
     print(f"user unit unitA3:  id {user.id}, userid {user.userid}, unit {user.unit}, name {user.name}, email {user.email}")
-    user = users_repo.get_user_by_composite_id(f"{'belavista'}-{'unitA4'}")
+    user = users_repo.get_user_by_id(f"{'belavista'}@{'unitA4'}")
     print(f"user composite:  id {user.id}, userid {user.userid}, unit {user.unit}, name {user.name}, email {user.email}")
 
     print(f"\ndata for demo:")
@@ -2274,7 +2606,7 @@ def test_new_users_rep():
         print(f"id: {user.id}, userid {user.userid}, unit {user.unit}, {user.name}, {user.email}")
 
     print(f"\ndata for belavista:")
-    user = users_repo.get_user_by_composite_id(f"{'belavista'}-{'unitA1'}")
+    user = users_repo.get_user_by_id(f"{'belavista'}@{'unitA1'}")
 
     print(f"\n user count in belavista: {users_repo.get_user_count_by_tenant('belavista')}")
     print(f"\n total user count: {users_repo.get_user_count_total()}")

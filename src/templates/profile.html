@@ -7,7 +7,7 @@
 
 
 {% block body %}
-  <div id="message_block_id" class="message_block"></div>
+<!--  <div id="message_block_id" class="message_block"></div>-->
 
 <div class="main">
   <nav id="sidebar">
@@ -21,12 +21,13 @@
         {% if info_data['is_authenticated'] == true and current_user.get_type()|int() == user_types['ADMIN']|int() %}
             <li><a class="nav-link" href="setup"><i class="fa fa-fw fa-keyboard-o"></i> {{_('Setup')}}</a></li>
             <li class="active"><a class="nav-link" href="profile"><i class="fa fa-fw fa-pencil"></i> {{_('Update')}}</a></li>
+            <li><a class="nav-link" href="reservations"><i class="fa fa-fw fa-calendar"></i> {{_('Reservations')}}</a></li>
+            <li><a class="nav-link" href="fines"><i class="fa fa-fw fa-dollar"></i> {{_('Fines')}}</a></li>
         {% elif info_data['is_authenticated'] == true %}
             <li class="active"><a class="nav-link" href="profile"><i class="fa fa-fw fa-pencil"></i> {{_('My Profile')}}</a></li>
+            <li><a class="nav-link" href="reservations"><i class="fa fa-fw fa-calendar"></i> {{_('Reservations')}}</a></li>
         {% endif %}
 
-
-        <li><a class="nav-link" href="about"><i class="fa fa-fw fa-info"></i> {{_("About")}}</a></li>
         <li><a class="nav-link" href="announcs"><i class="fa fa-fw fa-bullhorn"></i> {{_("Announcements")}}</a></li>
         <li><a class="nav-link" href="docs"><i class="fa fa-fw fa-book"></i> {{_("Documents")}}</a></li>
 
@@ -36,19 +37,20 @@
 
         <li><a class="nav-link" href="pics"><i class="fa fa-fw fa-picture-o"></i> {{_("Pictures")}}</a></li>
         <li><a class="nav-link" href="listings"><i class="fa fa-fw fa-list-ul"></i> {{_("Listings")}}</a></li>
-        <li><a class="nav-link" href="logout" aria-selected="false"><i class="fa fa-fw fa-sign-out"></i> {{_("Logout")}}</a></li>
-        <li class="menu-userid">[{{current_user.userid}}]</li>
+        <li><a class="nav-link" href="about"><i class="fa fa-fw fa-info"></i> {{_("About")}}</a></li>
+
+        {% include "info.html" %}
     </ul>
   </nav>
 
-  <div class="content">
+  <div id="content_id" class="content">
       {% include "mobile-menu.html" %}
 
       <div class="section-title" data-aos="zoom-out">
         <h2>{{_("View and Update Resident Profile")}}</h2>
       </div>
 
-          <div class="profile-block">
+          <div id="profile-block" class="profile-block">
             <div class="spacer"></div>
 
             {% if info_data['is_authenticated'] == true and current_user.get_type()|int() == user_types['ADMIN']|int() %}
@@ -171,7 +173,7 @@
                   <label for="occup1_email">{{_("Email")}}:</label>
                   <input class="email-input" type="email" id="occup1_email" name="occup1_email">
                   <label for="occup1_cc">CC:</label>
-                  <input type="checkbox" id="occup1_cc" name="occup1_cc" title="CC in emails sent from Whitegate">
+                  <input type="checkbox" id="occup1_cc" name="occup1_cc" title='{{_("CC in emails sent from the condominium")}}'>
                   <label for="occup1_phone">{{_("Phone")}}:</label>
                   <input class="phone-input" data-toggle="tooltip" title="Phone format (123) 456-7890" type="tel" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" id="occup1_phone" name="occup1_phone">
                   <label for="occup1_has_key">{{_("Has key to unit")}}:</label>
@@ -183,7 +185,7 @@
                   <label for="occup2_email">{{_("Email")}}:</label>
                   <input class="email-input" type="email" id="occup2_email" name="occup2_email">
                   <label for="occup2_cc">CC:</label>
-                  <input type="checkbox" id="occup2_cc" name="occup2_cc" title="CC in emails sent from Whitegate">
+                  <input type="checkbox" id="occup2_cc" name="occup2_cc" title='{{_("CC in emails sent from the condominium")}}'>
                   <label for="occup2_phone">{{_("Phone")}}:</label>
                   <input class="phone-input" data-toggle="tooltip" title="Phone format (123) 456-7890" type="tel" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" id="occup2_phone" name="occup2_phone">
                   <label for="occup2_has_key">{{_("Has key to unit")}}:</label>
@@ -195,7 +197,7 @@
                   <label for="occup3_email">{{_("Email")}}:</label>
                   <input class="email-input" type="email" id="occup3_email" name="occup3_email">
                   <label for="occup3_cc">CC:</label>
-                  <input type="checkbox" id="occup3_cc" name="occup3_cc" title="CC in emails sent from Whitegate">
+                  <input type="checkbox" id="occup3_cc" name="occup3_cc" title='{{_("CC in emails sent from the condominium")}}'>
                   <label for="occup3_phone">{{_("Phone")}}:</label>
                   <input class="phone-input" data-toggle="tooltip" title="Phone format (123) 456-7890" type="tel" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" id="occup3_phone" name="occup3_phone">
                   <label for="occup3_has_key">{{_("Has key to unit")}}:</label>
@@ -207,7 +209,7 @@
                   <label for="occup4_email">{{_("Email")}}:</label>
                   <input class="email-input" type="email" id="occup4_email" name="occup4_email">
                   <label for="occup4_cc">CC:</label>
-                  <input type="checkbox" id="occup4_cc" name="occup4_cc" title="CC in emails sent from Whitegate">
+                  <input type="checkbox" id="occup4_cc" name="occup4_cc" title='{{_("CC in emails sent from the condominium")}}'>
                   <label for="occup4_phone">{{_("Phone")}}:</label>
                   <input class="phone-input" data-toggle="tooltip" title="Phone format (123) 456-7890" type="tel" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" id="occup4_phone" name="occup4_phone">
                   <label for="occup4_has_key">{{_("Has key to unit")}}:</label>
@@ -219,7 +221,7 @@
                   <label for="occup5_email">{{_("Email")}}:</label>
                   <input class="email-input" type="email" id="occup5_email" name="occup5_email">
                   <label for="occup5_cc">CC:</label>
-                  <input type="checkbox" id="occup5_cc" name="occup5_cc" title="CC in emails sent from Whitegate">
+                  <input type="checkbox" id="occup5_cc" name="occup5_cc" title='{{_("CC in emails sent from the condominium")}}'>
                   <label for="occup5_phone">{{_("Phone")}}:</label>
                   <input class="phone-input" data-toggle="tooltip" title="Phone format (123) 456-7890" type="tel" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" id="occup5_phone" name="occup5_phone">
                   <label for="occup5_has_key">{{_("Has key to unit")}}:</label>
@@ -364,11 +366,7 @@
   </div> <!-- closes content -->
 </div> <!-- closes main -->
 
-<input type="hidden" id="loggedin-userid" value={{info_data['loggedin-userdata']['userid']}}>
-<input type="hidden" id="loggedin-id" value={{info_data['loggedin-userdata']['id']}}>
-<input type="hidden" id="loggedin-name" value={{info_data['loggedin-userdata']['name']}}>
-<input type="hidden" id="loggedin-email" value={{info_data['loggedin-userdata']['email']}}>
-<input type="hidden" id="loggedin-tenant" value={{info_data['loggedin-userdata']['tenant']}}>
+{% include "hidden_fields.html" %}
 {% endblock %}
 
 {% block afterbody %}

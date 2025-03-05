@@ -20,11 +20,13 @@
         {% if info_data['is_authenticated'] == true and current_user.get_type()|int() == user_types['ADMIN']|int() %}
             <li><a class="nav-link" href="setup"><i class="fa fa-fw fa-keyboard-o"></i> {{_('Setup')}}</a></li>
             <li><a class="nav-link" href="profile"><i class="fa fa-fw fa-pencil"></i> {{_('Update')}}</a></li>
+            <li><a class="nav-link" href="reservations"><i class="fa fa-fw fa-calendar"></i> {{_('Reservations')}}</a></li>
+            <li><a class="nav-link" href="fines"><i class="fa fa-fw fa-dollar"></i> {{_('Fines')}}</a></li>
         {% elif info_data['is_authenticated'] == true %}
             <li><a class="nav-link" href="profile"><i class="fa fa-fw fa-pencil"></i> {{_('My Profile')}}</a></li>
+            <li><a class="nav-link" href="reservations"><i class="fa fa-fw fa-calendar"></i> {{_('Reservations')}}</a></li>
         {% endif %}
 
-        <li><a class="nav-link" href="about"><i class="fa fa-fw fa-info"></i> {{_('About')}}</a></li>
         <li><a class="nav-link" href="announcs"><i class="fa fa-fw fa-bullhorn"></i> {{_('Announcements')}}</a></li>
         <li><a class="nav-link" href="docs"><i class="fa fa-fw fa-book"></i> {{_('Documents')}}</a></li>
 
@@ -34,13 +36,8 @@
 
         <li class="active"><a class="nav-link" href="pics"><i class="fa fa-fw fa-picture-o"></i> {{_('Pictures')}}</a></li>
         <li><a class="nav-link" href="listings"><i class="fa fa-fw fa-list-ul"></i> {{_('Listings')}}</a></li>
-
-        {% if info_data['is_authenticated'] == true  %}
-            <li><a class="nav-link" href="logout" aria-selected="false"><i class="fa fa-fw fa-sign-out"></i> {{_('Logout')}}</a></li>
-            <li class="menu-userid">[{{current_user.userid}}]</li>
-        {% else %}
-            <li><a class="nav-link" href="login" aria-selected="false"><i class="fa fa-fw fa-sign-in"></i> {{_('Login')}}</a></li>
-        {% endif %}
+        <li><a class="nav-link" href="about"><i class="fa fa-fw fa-info"></i> {{_('About')}}</a></li>
+        {% include "info.html" %}
     </ul>
   </nav>
 
@@ -124,39 +121,38 @@
           <div class="app-container collapse" id="add_new_event_section">
               <div class="spacer"></div>
 
-              <div style="font-size: 14px;">
-                  <div>
-                      <fieldset>
-                          <legend>{{_('Event Info')}}</legend>
-                          <label for="title">{{_('Title')}}:</label>
-                          <input class="title-input" type="text" id="title" name="title">
-                          <label class="separator-spacer"></label>
-                          <label for="event_date">{{_('Date')}}:</label>
-                          <input class="date-input" id="event_date" name="event_date">
-                      </fieldset>
-                      <div class="spacer"></div>
-                      <fieldset>
-                          <legend>{{_('Pictures')}}</legend>
-                          <div>
-                              <label for="files_cntrl" class="button larger-button"><i class="fa fa-folder-o"></i>&nbsp;&nbsp;{{_('Choose the Folder Where Your Pictures Are')}}</label>
-                              <input id="files_cntrl" type="file" style="display: none" title="Click to Select a Folder" webkitdirectory directory multiple="false"/>
-                          </div>
-                          <div>
-                              <fieldset>
-                                  <legend>{{_('Picture Files')}}</legend>
-                                  <div class="selected-files" id="selectedFiles"></div>
-                              </fieldset>
-                          </div>
-                      </fieldset>
-                      <div class="spacer"></div>
-                      <div class="spacer"></div>
+              <div class="profile-block" style="font-size: 14px;">
+                  <fieldset>
+                      <legend>{{_('Event Info')}}</legend>
+                      <label for="title">{{_('Title')}}:</label>
+                      <input class="title-input" type="text" id="title" name="title">
+                      <label class="separator-spacer"></label>
+                      <label for="event_date">{{_('Date')}}:</label>
+                      <input class="date-input" type="date" id="event_date" name="event_date">
+                  </fieldset>
+                  <div class="spacer"></div>
+                  <fieldset>
+                      <legend>{{_('Pictures')}}</legend>
                       <div>
-                          <button class="button larger-button" id="upload_button" onclick="uploadPictureFiles('event_picture', 'files_cntrl', 'progress_bar')" disabled>
-                          <i class="fa fa-upload"></i>&nbsp;&nbsp;{{_('Upload pictures & Create this new event')}}</button>
-                          <progress id="progress_bar" value="0" max="100"/>
+                          <label for="files_cntrl" class="button larger-button"><i class="fa fa-folder-o"></i>&nbsp;&nbsp;{{_('Choose the Folder Where Your Pictures Are')}}</label>
+                          <input id="files_cntrl" type="file" style="display: none" title="Click to Select a Folder" webkitdirectory directory multiple="false"/>
                       </div>
+                      <div>
+                          <fieldset>
+                              <legend>{{_('Picture Files')}}</legend>
+                              <div class="selected-files" id="selectedFiles"></div>
+                          </fieldset>
+                      </div>
+                  </fieldset>
+                  <div class="spacer"></div>
+                  <div class="spacer"></div>
+                  <div class="center">
+                      <button class="button larger-button" id="upload_button" onclick="uploadPictureFiles('event_picture', 'files_cntrl', 'progress_bar')" disabled>
+                      <i class="fa fa-upload"></i>&nbsp;&nbsp;{{_('Upload pictures & Create this new event')}}</button>
+                      <progress id="progress_bar" value="0" max="100"/>
                   </div>
               </div>
+
           </div> <!-- closes app-container -->
       {% endif %}
 
@@ -164,11 +160,7 @@
 
 </div> <!-- close main -->
 
-<input type="hidden" id="loggedin-id" value={{info_data['loggedin-userdata']['id']}}>
-<input type="hidden" id="loggedin-unit" value={{info_data['loggedin-userdata']['unit']}}>
-<input type="hidden" id="loggedin-userid" value={{info_data['loggedin-userdata']['userid']}}>
-<input type="hidden" id="loggedin-name" value={{info_data['loggedin-userdata']['name']}}>
-<input type="hidden" id="loggedin-tenant" value={{info_data['loggedin-userdata']['tenant']}}>
+{% include "hidden_fields.html" %}
 {% endblock %}
 
 {% block afterbody %}

@@ -4,19 +4,21 @@ const SECRETARY_TYPE = 2;
 const RESIDENT_TYPE = 3;
 
 var resident_type = RESIDENT_TYPE;
-var loggedin_user = 0;
-var loggedin_unit = 0;
 
 function onLoadAction() {
     // I have to find a better way to tell which is the logged-in user, other
     // than asking the server
     //loadResident();
+    window.loggedin_id_global = document.getElementById('loggedin-id').value;
     window.loggedin_userid_global = document.getElementById('loggedin-userid').value;
+    window.loggedin_unit_global = document.getElementById('loggedin-unit').value;
     window.loggedin_name_global = document.getElementById('loggedin-name').value;
     window.loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
+    window.loggedin_lang_global = document.getElementById('loggedin-lang').value;
     retrieveLoggedinResident(window.loggedin_userid_global);
 }
 
+/*
 function loadResident() {
   var request = new XMLHttpRequest();
   request.open('GET', '/getloggedinuser', true);
@@ -46,6 +48,7 @@ function loadResident() {
     }
   }
 }
+*/
 
 function retrieveLoggedinResident(userid) {
   var request = new XMLHttpRequest();
@@ -89,6 +92,8 @@ function retrieveLoggedinResident(userid) {
     }
   }
 }
+
+
 
 /*
    invoked when a unit is selected from the dropdown box
@@ -262,7 +267,7 @@ function retrieveUserByUnit() {
         populateScreen(json);
     }
     else {
-        alert('Error retrieving unit')
+        alert('Error retrieving unit');
     }
 
   }
@@ -644,7 +649,7 @@ function change_db_password(user_id, new_password) {
           alert('New password saved to database');
       }
       else {
-          alert('Error saving password to database')
+          alert('Error saving password to database');
       }
     }
 }
@@ -721,7 +726,7 @@ function change_db_userid(unit, new_userid) {
           alert('New user id saved to database');
       }
       else {
-          alert('Error saving user id to database')
+          alert('Error saving user id to database');
       }
     }
 }

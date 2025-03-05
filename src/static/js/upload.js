@@ -3,11 +3,12 @@
 function onLoadAction() {
     window.loggedin_id_global = document.getElementById('loggedin-id').value;
     window.loggedin_userid_global = document.getElementById('loggedin-userid').value;
+    window.loggedin_unit_global = document.getElementById('loggedin-unit').value;
     window.loggedin_name_global = document.getElementById('loggedin-name').value;
     window.loggedin_tenant_global = document.getElementById('loggedin-tenant').value.trim();
+    window.loggedin_lang_global = document.getElementById('loggedin-lang').value;
     document.getElementById("email-progress-bar").style.display = "none";
     fillAnnouncs();
-    retrieveUsers();
     fillSystemSettings();
 }
 
@@ -35,7 +36,7 @@ function fillAnnouncs() {
           document.getElementById('announctextfield_id').innerHTML = announcs_text;
       }
       else {
-          alert('Error retrieving announcements list')
+          showMsgBox( gettext('Error retrieving announcements list') );
       }
 
     }
@@ -50,24 +51,109 @@ function fillSystemSettings() {
     request.onload = function () {
       // Begin accessing JSON data here
       var json = JSON.parse(this.response);
+      var pix_key = '';
+      var fine_template = '';
+      var fine_email_title = '';
 
       if (request.status >= 200 && request.status < 400) {
-          document.getElementById('condo-name').value = json.config['condo_name'];
-          document.getElementById('condo-tagline').value = json.config['tagline'];
-          document.getElementById('condo-address').value = json.config['address'];
-          document.getElementById('condo-zip').value = json.config['zip'];
-          document.getElementById('condo-location').value = json.config['condo_location'];
-          document.getElementById('home-page-title').value = json.config.home_message.title;
-          document.getElementById('about-page-title').value = json.config.about_message.title;
-          document.getElementById('home-page-text').value = json.config.home_message.text;
-          document.getElementById('about-page-text').value = json.config.about_message.text;
+          if ( 'pix_key' in json ) {
+              pix_key = json['pix_key'];
+          }
+
+          if ( 'fine_template' in json ) {
+              fine_template = json['fine_template'];
+          }
+
+          if ( 'fine_title' in json ) {
+              fine_email_title = json['fine_title'];
+          }
+
+          document.getElementById('condo-name').value = json['condo_name'];
+          document.getElementById('condo-tagline').value = json['tagline'];
+          document.getElementById('condo-address').value = json['address'];
+          document.getElementById('condo-zip').value = json['zip'];
+          document.getElementById('condo-location').value = json['condo_location'];
+          document.getElementById('home-page-title').value = json.home_message.title;
+          document.getElementById('about-page-title').value = json.about_message.title;
+          document.getElementById('home-page-text').value = json.home_message.text;
+          document.getElementById('about-page-text').value = json.about_message.text;
+          document.getElementById('fine_email_title').value = fine_email_title;
+          document.getElementById('pix_key').value = pix_key;
+          document.getElementById('fine_template').value = fine_template;
       }
       else {
-          alert('Error retrieving announcements list')
+          showMsgBox( gettext('Error retrieving announcements list') );
       }
 
     }
     request.send();
+}
+
+function updateSystemSettings() {
+    condo_name = document.getElementById('condo-name').value.trim();
+    condo_tagline = document.getElementById('condo-tagline').value.trim();
+    condo_address = document.getElementById('condo-address').value.trim();
+    condo_zip = document.getElementById('condo-zip').value.trim();
+    condo_location = document.getElementById('condo-location').value.trim();
+    home_page_title = document.getElementById('home-page-title').value.trim();
+    home_page_text = document.getElementById('home-page-text').value.trim();
+    about_page_title = document.getElementById('about-page-title').value.trim();
+    about_page_text = document.getElementById('about-page-text').value.trim();
+    pix_key = document.getElementById('pix_key').value.trim();
+    fine_template = document.getElementById('fine_template').value.trim();
+    fine_email_title = document.getElementById('fine_email_title').value.trim();
+
+    if ( condo_name.length == 0  ||  condo_tagline.length == 0  ||  condo_address.length == 0  ||  condo_location.length == 0 ) {
+        showMsgBox( gettext("Condo Name, Tagline, Address, ZIP and Location are required fields") );
+        return;
+    }
+
+    if ( !isInteger(condo_zip) ) {
+       showMsgBox( gettext('ZIP must be size 5 or 8 and only digits') );
+       return;
+    }
+
+    // here we make a request to "upload_link"
+    var request = new XMLHttpRequest();
+    post_url = "/" + window.loggedin_tenant_global + "/update_system_settings";
+    request.open('POST', post_url, true)
+
+    request.onload = function () {
+      // Begin accessing JSON data here
+      var json = JSON.parse(this.response);
+
+      if (request.status >= 200 && request.status < 400) {
+          if (json.response.status == 'error') {
+              showMsgBox( gettext('error uploading system settings') );
+          }
+          else {
+              showMsgBoxSuccess( gettext('Settings successfully uploaded to the server') );
+              location.reload(true);
+          }
+      }
+      else {
+          showMsgBox( gettext('Error uploading the settings') );
+      }
+
+      return;
+    }
+
+    var requestObj = new Object();
+    requestObj.condo_name = condo_name;
+    requestObj.condo_tagline = condo_tagline;
+    requestObj.condo_address = condo_address;
+    requestObj.condo_zip = condo_zip;
+    requestObj.condo_location = condo_location;
+    requestObj.home_page_title = home_page_title;
+    requestObj.about_page_title = about_page_title;
+    requestObj.home_page_text = home_page_text;
+    requestObj.about_page_text = about_page_text;
+    requestObj.pix_key = pix_key;
+    requestObj.fine_template = fine_template;
+    requestObj.fine_email_title = fine_email_title;
+    jsonStr = '{ "request": ' + JSON.stringify(requestObj) + '}';
+    request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    request.send(jsonStr);
 }
 
 /*
@@ -93,16 +179,16 @@ function saveAnnouncs() {
 
       if (request.status >= 200 && request.status < 400) {
           if (json.response.status == 'success') {
-              alert('Announcements have been saved.');
+              showMsgBoxSuccess( gettext('Announcements have been saved.') );
               return;
           }
           else {
-              alert('There was a problem trying to save the announcements.');
+              showMsgBox( gettext('There was a problem trying to save the announcements.') );
               return;
           }
       }
       else {
-          alert('Error saving the announcements.');
+          showMsgBox( gettext('Error saving the announcements.') );
           return;
       }
     }
@@ -145,15 +231,15 @@ function deleteFile(filepath, filename) {
 
         if (request.status >= 200 && request.status < 400) {
             if (json.status == 'success') {
-                alert('File ' + filename + ' has been deleted.');
+                showMsgBoxSuccess( gettext("File") + " '" + filename + "' " + gettext("has been deleted") );
                 location.reload(true);
             }
             else {
-                alert("Some error occurred trying to delete file "+filename);
+                showMsgBox( gettext("Some error occurred trying to delete file") + " " + filename);
             }
         }
         else {
-            alert('Error communicating with the server.');
+            showMsgBox( gettext('Error communicating with the server.') );
         }
     }
 
@@ -185,24 +271,25 @@ function startSendEmail() {
 
       if (request.status >= 200 && request.status < 400) {
           if (json.response.status == 'not_found') {
-              alert('Record not found for User Id '+userid);
+              showMsgBox( gettext("Record not found for User Id") + ' ' + userid );
               return;
           }
 
           if (json.response.resident.email.trim().length == 0) {
-              alert("User doesn't have an email address on file");
+              showMsgBox( gettext("User doesn't have an email address on file") );
               return;
           }
 
           sendEmail(json);
       }
       else {
-          alert('Error retrieving user');
+          showMsgBox( gettext('Error retrieving user') );
           return;
       }
     }
 }
 
+/*
 function retrieveUsers() {
     var request = new XMLHttpRequest()
     post_url = "/" + window.loggedin_tenant_global + "/getresidents";
@@ -221,13 +308,14 @@ function retrieveUsers() {
           populateTable(json, 'residents_table_id', 'resident');
       }
       else {
-          alert('Error retrieving residents list')
+          showMsgBox( gettext('Error retrieving residents list') );
       }
 
     }
 
     request.send(jsonStr);
 }
+*/
 
 function sendEmail(json) {
     var userid = json.response.resident.userid;
@@ -244,14 +332,14 @@ function sendEmail(json) {
 
       if (request.status >= 200 && request.status < 400) {
           if (json.response.status == 'error') {
-              alert('error sending email to user');
+              showMsgBox( gettext('error sending email to user') );
           }
           else {
-              alert('Email sent to user');
+              showMsgBoxSuccess( gettext('Email sent to user') );
           }
       }
       else {
-          alert('Error sending email');
+          showMsgBox( gettext('Error sending email') );
       }
 
       return;
@@ -280,7 +368,7 @@ async function sendBulkEmail() {
     requestObj.body = document.getElementById('emailtextfield_id').value;
 
     if ( requestObj.subject.trim().length == 0 || requestObj.body.trim().length == 0 ) {
-        alert("Title and Body of the message are required");
+        showMsgBox( gettext("Title and Body of the message are required") );
         return;
     }
 
@@ -329,7 +417,7 @@ async function getStatus() {
     if (status.percent == 100) {
       clearInterval(timeout);
       document.getElementById("progress-bar").style.display = "none";
-      alert('Email sent to all users');
+      showMsgBoxSuccess( gettext('Email sent to all users') );
       document.getElementById('titlefield_id').value = '';
       document.getElementById('emailtextfield_id').value = '';
       return false;
@@ -342,7 +430,7 @@ async function sendPasswordReset() {
     requestObj.recipient_email = document.getElementById('recipient_email').value;
 
     if ( requestObj.unit_id < 1 || requestObj.unit_id > 53 ) {
-        alert("Choose a unit number whose password will be reset");
+        showMsgBox( gettext("Choose a unit number whose password will be reset") );
         return;
     }
 
@@ -366,7 +454,7 @@ async function sendPasswordReset() {
         }
         else {
             console.error("An error occurred while resetting password.");
-            alert("An error occurred while resetting password. Please try again.");
+            showMsgBox( gettext("An error occurred while resetting password. Please try again.") );
         }
     });
 }
@@ -383,15 +471,15 @@ function deleteLink(link_descr) {
 
       if (request.status >= 200 && request.status < 400) {
           if (json.response.status == 'error') {
-              alert('error uploading a new link');
+              showMsgBox( gettext('error uploading a new link') );
           }
           else {
-              alert("Link '"+link_descr +"' deleted from the list");
+              showMsgBoxSuccess( gettext("Link") + " '" + link_descr + "' " + gettext("deleted from the list") ) ;
               location.reload();
           }
       }
       else {
-          alert('Error deleting the link');
+          showMsgBox( gettext('Error deleting the link') );
       }
 
       return;

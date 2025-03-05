@@ -7,6 +7,7 @@ import json
 from flask_login import UserMixin
 from werkzeug.utils import secure_filename
 
+SEPARATOR_CHAR = "@"
 
 class User(UserMixin):
     def __init__(self, id, unit, tenant, userid, password, name, email, startdt, phone, type, ownername,
@@ -221,7 +222,7 @@ class UsersRepository:
             if key.lower() == userid.lower():
                 return value
         return None
-    
+
     def get_user_by_id(self, tenant_id, id):
         for user in self.get_users(tenant_id):
             if user.id == id:
@@ -238,22 +239,22 @@ class UsersRepository:
                 last_unit = user.unit
         return last_unit
 
-    def get_user_by_composite_id(self, composite_id):
-        ind = composite_id.find('-')
-        tenant_id = composite_id[:ind]
-        user_id = composite_id[ind+1:]
-        print(f"{tenant_id}  {user_id}")
-        return self.get_user_by_userid(tenant_id, user_id)
+    # def get_user_by_composite_id(self, composite_id):
+    #     ind = composite_id.find('-')
+    #     tenant_id = composite_id[:ind]
+    #     user_id = composite_id[ind+1:]
+    #     print(f"{tenant_id}  {user_id}")
+    #     return self.get_user_by_userid(tenant_id, user_id)
 
     def get_user_by_unit(self, tenant_id, unit):
         for user in self.get_users(tenant_id):
             if user.unit == unit:
                 return user
         return None
-    
+
     def get_users(self, tenant_id):
         return self.tenant_dict[tenant_id]['users'].values()
-    
+
     def delete_user(self, tenant_id, user):
         user_obj = self.tenant_dict[tenant_id]['users'][user.userid]
         if user_obj is None:
@@ -271,12 +272,12 @@ class UsersRepository:
 
     def load_users(self, tenant):
         string_content = self.aws.read_text_obj(f"{tenant}/serverfiles/residents.json")
-        json_obj = json.loads(string_content)    
+        json_obj = json.loads(string_content)
         residents = json_obj['residents']
         self.reset_tenant_user_dict(tenant)
         for resident in residents:
             user = User(
-                f"{tenant}-{resident['userid']}",
+                f"{tenant}{SEPARATOR_CHAR}{resident['userid']}",
                 resident['unit'],
                 tenant,
                 resident['userid'],
@@ -309,11 +310,11 @@ class UsersRepository:
                 resident['notes']
             )
             self.save_user(tenant, user)
-    
+
     def save_user_and_persist(self, tenant, user):
         self.save_user(tenant, user)
         self.persist_users(tenant)
-        
+
     def persist_users(self, tenant):
             userslist = []
             for user in self.tenant_dict[tenant]['users'].values():
@@ -352,25 +353,24 @@ class UsersRepository:
             residents = {'residents': userslist}
             json_obj = json.dumps(residents, indent=2)
             self.aws.upload_text_obj(f"{tenant}/serverfiles/residents.json", json_obj)
-    
+
 
 class UsersUtils:
     def __init__(self):
         self.user_dict = dict()
         self.identifier = 0
-    
+
     def get_user_by_userid(self, userid):
         for key in self.get_users():
             user = self.get_user_by_unit(key)
             if user.userid == userid:
                 return user
         return None
-    
+
     def get_users(self):
         pass
-        
-    def get_user_by_unit(self, unit):    
+
+    def get_user_by_unit(self, unit):
         pass
 
-        
 

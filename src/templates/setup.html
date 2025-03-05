@@ -19,15 +19,17 @@
       <li><a class="nav-link" href="home"><i class="fa fa-fw fa-home"></i> {{_('Home')}}</a></li>
       <li class="active"><a class="nav-link" href="setup"><i class="fa fa-fw fa-keyboard-o"></i> {{_('Setup')}}</a></li>
       <li><a class="nav-link" href="profile"><i class="fa fa-fw fa-pencil"></i> {{_('Update')}}</a></li>
-      <li><a class="nav-link" href="about"><i class="fa fa-fw fa-info"></i> {{_('About')}}</a></li>
+      <li><a class="nav-link" href="reservations"><i class="fa fa-fw fa-calendar"></i> {{_('Reservations')}}</a></li>
+      <li><a class="nav-link" href="fines"><i class="fa fa-fw fa-dollar"></i> {{_('Fines')}}</a></li>
       <li><a class="nav-link" href="announcs"><i class="fa fa-fw fa-bullhorn"></i> {{_('Announcements')}}</a></li>
       <li><a class="nav-link" href="docs"><i class="fa fa-fw fa-book"></i> {{_('Documents')}}</a></li>
       <li><a class="nav-link" href="upload" aria-selected="false"><i class="fa fa-fw fa-cog"></i> {{_('Maintenance')}}</a></li>
       <li><a class="nav-link" href="pics"><i class="fa fa-fw fa-picture-o"></i> {{_('Pictures')}}</a></li>
       <li><a class="nav-link" href="listings"><i class="fa fa-fw fa-list-ul"></i> {{_('Listings')}}</a></li>
-      <li><a class="nav-link" href="logout" aria-selected="false"><i class="fa fa-fw fa-sign-out"></i> {{_('Logout')}}</a></li>
-      <li class="menu-userid">[{{current_user.userid}}]</li>
-    </ul>
+      <li><a class="nav-link" href="about"><i class="fa fa-fw fa-info"></i> {{_('About')}}</a></li>
+
+      {% include "info.html" %}
+  </ul>
   </nav>
 
   <div class="content">
@@ -52,44 +54,48 @@
         <div class="profile-block">
           <fieldset>
               <legend>Admins</legend>
-              <table class="table table-sm" id="adm_table_id">
-                <tr>
-                  <th style="width: 3%;"></th>
-                  <th style="width: 3%;">Seq</th>
-                  <th style="width: 6%;">{{_('User Id')}}</th>
-                  <th style="width: 8%;">{{_('Password')}}</th>
-                  <th style="width: 6%;">{{_('Type')}}</th>
-                  <th style="width: 15%;">{{_("Resident's Name")}}</th>
-                  <th style="width: 15%;">{{_("Resident's Email")}}</th>
-                  <th style="width: 8%;">{{_("Resident's Phone")}}</th>
-                  <th style="width: 13%;">{{_("Owner's Name")}}</th>
-                  <th style="width: 13%;">{{_("Owner's Email")}}</th>
-                  <th style="width: 8%;">{{_("Owner's Phone")}}</th>
-                  <th style="width: 8%;">{{_('Start Date')}}</th>
-                </tr>
-              </table>
+              <div style="width: 98%; margin: auto;">
+                <table class="table table-sm" id="adm_table_id">
+                  <tr>
+                    <th style="width: 3%;"></th>
+                    <th style="width: 3%;">Seq</th>
+                    <th style="width: 6%;">{{_('User Id')}}</th>
+                    <th style="width: 8%;">{{_('Password')}}</th>
+                    <th style="width: 6%;">{{_('Type')}}</th>
+                    <th style="width: 15%;">{{_("Resident's Name")}}</th>
+                    <th style="width: 15%;">{{_("Resident's Email")}}</th>
+                    <th style="width: 8%;">{{_("Resident's Phone")}}</th>
+                    <th style="width: 13%;">{{_("Owner's Name")}}</th>
+                    <th style="width: 13%;">{{_("Owner's Email")}}</th>
+                    <th style="width: 8%;">{{_("Owner's Phone")}}</th>
+                    <th style="width: 8%;">{{_('Start Date')}}</th>
+                  </tr>
+                </table>
+              </div>
           </fieldset>
 
           <div class="spacer"></div>
 
           <fieldset>
               <legend>{{_('Residents')}}</legend>
-              <table class="table table-sm" id="residents_table_id">
-                <tr>
-                  <th style="width: 3%;"></th>
-                  <th style="width: 3%;">Seq</th>
-                  <th style="width: 6%;">{{_('User Id')}}</th>
-                  <th style="width: 8%;">{{_('Password')}}</th>
-                  <th style="width: 6%;">{{_('Type')}}</th>
-                  <th style="width: 15%;">{{_("Resident's Name")}}</th>
-                  <th style="width: 15%;">{{_("Resident's Email")}}</th>
-                  <th style="width: 8%;">{{_("Resident's Phone")}}</th>
-                  <th style="width: 13%;">{{_("Owner's Name")}}</th>
-                  <th style="width: 13%;">{{_("Owner's Email")}}</th>
-                  <th style="width: 8%;">{{_("Owner's Phone")}}</th>
-                  <th style="width: 8%;">{{_('Start Date')}}</th>
-                </tr>
-              </table>
+              <div style="width: 98%; margin: auto;">
+                <table class="table table-sm" id="residents_table_id">
+                  <tr>
+                    <th style="width: 3%;"></th>
+                    <th style="width: 3%;">Seq</th>
+                    <th style="width: 6%;">{{_('User Id')}}</th>
+                    <th style="width: 8%;">{{_('Password')}}</th>
+                    <th style="width: 6%;">{{_('Type')}}</th>
+                    <th style="width: 15%;">{{_("Resident's Name")}}</th>
+                    <th style="width: 15%;">{{_("Resident's Email")}}</th>
+                    <th style="width: 8%;">{{_("Resident's Phone")}}</th>
+                    <th style="width: 13%;">{{_("Owner's Name")}}</th>
+                    <th style="width: 13%;">{{_("Owner's Email")}}</th>
+                    <th style="width: 8%;">{{_("Owner's Phone")}}</th>
+                    <th style="width: 8%;">{{_('Start Date')}}</th>
+                  </tr>
+                </table>
+              </div>
           </fieldset>
 
           <div class="spacer"></div>
@@ -98,9 +104,7 @@
               <legend>{{_("Generate List of Residents")}}</legend>
               <div class="center">
                 <button class="btn-primary" id="gen-residents-pdf-button" onclick="gen_residents_pdf()">{{_("Generate Census Forms PDF")}}</button>
-                <button class="btn-primary" id="get-residents-pdf-button">
-                  <a style="font-size 16px; color: white;" href="docs/other/census_form.pdf" target="_blank">{{_("Download Census Forms PDF")}}</a>
-                </button>
+                <button class="btn-primary" id="download-residents-pdf-button" onclick="download_residents_pdf()">{{_("Download Census Forms PDF")}}</button>
                 <div>{{_("Census Forms PDF Last Generated")}}: {{info_data['census_forms_pdf_date']}}</div>
               </div>
           </fieldset>
@@ -108,13 +112,13 @@
           <div class="spacer"></div>
 
         </div>
-    </div> <!-- close app-container -->
+    </div> <!-- close app-container / units-section -->
 
 
     <div class="spacer"></div>
     <div class="spacer"></div>
 
-    <div class="profile-block">
+    <div id="content_id" class="profile-block">
       <fieldset>
         <div class="row align-items-center">
         <div class="col-4">
@@ -393,43 +397,14 @@
     <div class="spacer"></div>
     <div class="spacer"></div>
 
-<!--    <div class="profile-block">-->
-<!--        <fieldset>-->
-<!--          <legend>{{_('Use This Section Exclusively for Deletion of Unit')}}</legend>-->
-
-<!--          <label for="user_id_delete">{{_('Unit / User Id')}}:</label>-->
-<!--          <select class="unit-dropdown" id="user_id_delete" name="user_id_delete" onChange="retrieveUser();">-->
-<!--            <option value="none" selected disabled hidden>{{_('Select unit')}}</option>-->
-<!--            {% for unit in units %}-->
-<!--                {% if not unit['userid'].startswith('admin') %}-->
-<!--                    <option value="{{unit['userid']}}">{{unit['userid']}}</option>-->
-<!--                {% endif %}-->
-<!--            {% endfor %}-->
-<!--          </select>-->
-
-<!--          <label for="name_delete">{{_('Name')}}:</label>-->
-<!--          <input class="name_input" id="name_delete" name="name_delete" readonly>-->
-<!--          <label for="email_delete">Email:</label>-->
-<!--          <input class="email_input" id="email_delete" name="email_delete" readonly>-->
-<!--          <label for="phone_delete">{{_('Phone')}}:</label>-->
-<!--          <input class="phone_input" id="phone_delete" name="phone_delete" readonly>-->
-
-<!--          <div class="spacer"></div>-->
-
-<!--          <div class="center">-->
-<!--              <button class="button larger-button" id="delete_resident_btn" onClick="deleteUser();"><i class="fa fa-remove"></i>&nbsp;&nbsp;{{_('Delete Unit from Database')}}</button>-->
-<!--          </div>-->
-<!--        </fieldset>-->
+<!--    <div id="message_block_id" class="message_block">-->
 <!--    </div>-->
 
   </div> <!-- closes content -->
 </div> <!-- closes main -->
 
-<input type="hidden" id="loggedin-id" value={{info_data['loggedin-userdata']['id']}}>
-<input type="hidden" id="loggedin-userid" value={{info_data['loggedin-userdata']['userid']}}>
-<input type="hidden" id="loggedin-unit" value={{info_data['loggedin-userdata']['unit']}}>
-<input type="hidden" id="loggedin-name" value={{info_data['loggedin-userdata']['name']}}>
-<input type="hidden" id="loggedin-tenant" value={{info_data['loggedin-userdata']['tenant']}}>
+{% include "hidden_fields.html" %}
+
 {% endblock %}
 
 
